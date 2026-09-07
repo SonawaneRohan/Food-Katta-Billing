@@ -1,0 +1,297 @@
+{
+  "entities": {
+    "Category": {
+      "title": "Category",
+      "description": "Menu category",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 100 },
+        "displayOrder": { "type": "number" },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["name", "displayOrder", "isActive"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Restaurant menu item",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 150 },
+        "categoryId": { "type": "string", "maxLength": 100 },
+        "categoryName": { "type": "string", "maxLength": 100 },
+        "sellingPrice": { "type": "number" },
+        "taxRate": { "type": "number" },
+        "sku": { "type": "string", "maxLength": 50 },
+        "isAvailable": { "type": "boolean" },
+        "kitchenStation": { "type": "string", "enum": ["MAIN KITCHEN", "DRINKS", "HOOKAH"] },
+        "description": { "type": "string", "maxLength": 500 },
+        "imageUrl": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["name", "categoryId", "sellingPrice", "isAvailable", "kitchenStation"]
+    },
+    "RestaurantTable": {
+      "title": "RestaurantTable",
+      "description": "Dining table",
+      "type": "object",
+      "properties": {
+        "tableNumber": { "type": "string", "maxLength": 20 },
+        "section": { "type": "string", "maxLength": 50 },
+        "capacity": { "type": "number" },
+        "status": { "type": "string", "enum": ["AVAILABLE", "OCCUPIED", "ORDER READY", "BILL REQUESTED", "PAYMENT PENDING"] },
+        "currentOrderId": { "type": "string", "maxLength": 100 },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["tableNumber", "section", "capacity", "status"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Customer order",
+      "type": "object",
+      "properties": {
+        "orderNumber": { "type": "string", "maxLength": 50 },
+        "orderType": { "type": "string", "enum": ["dine-in", "takeaway", "delivery"] },
+        "tableId": { "type": "string", "maxLength": 100 },
+        "tableName": { "type": "string", "maxLength": 50 },
+        "customerId": { "type": "string", "maxLength": 100 },
+        "customerName": { "type": "string", "maxLength": 100 },
+        "customerPhone": { "type": "string", "maxLength": 20 },
+        "status": { "type": "string", "enum": ["open", "kot_sent", "bill_requested", "completed", "cancelled"] },
+        "subtotal": { "type": "number" },
+        "discount": { "type": "number" },
+        "discountType": { "type": "string", "enum": ["fixed", "percent"] },
+        "taxAmount": { "type": "number" },
+        "grandTotal": { "type": "number" },
+        "itemsCount": { "type": "number" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "createdBy": { "type": "string", "maxLength": 100 }
+      },
+      "required": ["orderNumber", "orderType", "status", "grandTotal"]
+    },
+    "KotOrder": {
+      "title": "KotOrder",
+      "description": "Kitchen order ticket",
+      "type": "object",
+      "properties": {
+        "kotNumber": { "type": "string", "maxLength": 50 },
+        "orderId": { "type": "string", "maxLength": 100 },
+        "orderNumber": { "type": "string", "maxLength": 50 },
+        "tableId": { "type": "string", "maxLength": 100 },
+        "tableName": { "type": "string", "maxLength": 50 },
+        "kitchenStation": { "type": "string", "enum": ["MAIN KITCHEN", "DRINKS", "HOOKAH", "ALL"] },
+        "status": { "type": "string", "enum": ["NEW", "ACCEPTED", "PREPARING", "READY", "SERVED", "CANCELLED"] },
+        "notes": { "type": "string", "maxLength": 300 },
+        "cashierName": { "type": "string", "maxLength": 100 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["kotNumber", "orderId", "status", "kitchenStation"]
+    },
+    "Bill": {
+      "title": "Bill",
+      "description": "Completed tax invoice",
+      "type": "object",
+      "properties": {
+        "billNumber": { "type": "string", "maxLength": 50 },
+        "orderId": { "type": "string", "maxLength": 100 },
+        "orderNumber": { "type": "string", "maxLength": 50 },
+        "tableName": { "type": "string", "maxLength": 50 },
+        "customerName": { "type": "string", "maxLength": 100 },
+        "customerPhone": { "type": "string", "maxLength": 20 },
+        "subtotal": { "type": "number" },
+        "itemDiscounts": { "type": "number" },
+        "orderDiscount": { "type": "number" },
+        "taxableAmount": { "type": "number" },
+        "cgst": { "type": "number" },
+        "sgst": { "type": "number" },
+        "roundOff": { "type": "number" },
+        "grandTotal": { "type": "number" },
+        "paymentStatus": { "type": "string", "enum": ["PAID", "REFUNDED", "CANCELLED"] },
+        "cashierName": { "type": "string", "maxLength": 100 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["billNumber", "grandTotal", "paymentStatus"]
+    },
+    "Customer": {
+      "title": "Customer",
+      "description": "Customer contact and metrics",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 100 },
+        "phone": { "type": "string", "maxLength": 20 },
+        "whatsappNumber": { "type": "string", "maxLength": 20 },
+        "email": { "type": "string", "maxLength": 100 },
+        "address": { "type": "string", "maxLength": 300 },
+        "notes": { "type": "string", "maxLength": 500 },
+        "totalVisits": { "type": "number" },
+        "totalSpending": { "type": "number" },
+        "lastVisit": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["name", "phone"]
+    },
+    "Expense": {
+      "title": "Expense",
+      "description": "Operating expense",
+      "type": "object",
+      "properties": {
+        "category": { "type": "string", "enum": ["Rent", "Electricity", "Gas", "Raw Materials", "Salary", "Maintenance", "Marketing", "Other"] },
+        "description": { "type": "string", "maxLength": 300 },
+        "amount": { "type": "number" },
+        "paymentMethod": { "type": "string", "enum": ["Cash", "UPI", "Bank Transfer", "Card", "Cheque"] },
+        "date": { "type": "string" },
+        "addedBy": { "type": "string", "maxLength": 100 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["category", "description", "amount", "date"]
+    },
+    "InventoryItem": {
+      "title": "InventoryItem",
+      "description": "Stock tracking item",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 150 },
+        "sku": { "type": "string", "maxLength": 50 },
+        "unit": { "type": "string", "maxLength": 20 },
+        "currentStock": { "type": "number" },
+        "minimumStock": { "type": "number" },
+        "costPrice": { "type": "number" },
+        "supplier": { "type": "string", "maxLength": 100 },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["name", "unit", "currentStock", "costPrice"]
+    },
+    "CashRegister": {
+      "title": "CashRegister",
+      "description": "Shift register tracking",
+      "type": "object",
+      "properties": {
+        "openedBy": { "type": "string", "maxLength": 100 },
+        "openedByName": { "type": "string", "maxLength": 100 },
+        "openingCash": { "type": "number" },
+        "openingTime": { "type": "string" },
+        "status": { "type": "string", "enum": ["OPEN", "CLOSED"] },
+        "cashSales": { "type": "number" },
+        "cashExpenses": { "type": "number" },
+        "cashAdjustments": { "type": "number" },
+        "expectedCash": { "type": "number" },
+        "actualCash": { "type": "number" },
+        "difference": { "type": "number" },
+        "closedBy": { "type": "string", "maxLength": 100 },
+        "closingTime": { "type": "string" },
+        "notes": { "type": "string", "maxLength": 500 }
+      },
+      "required": ["openedBy", "openingCash", "openingTime", "status"]
+    },
+    "Staff": {
+      "title": "Staff",
+      "description": "Staff profile and role",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 100 },
+        "email": { "type": "string", "maxLength": 100 },
+        "phone": { "type": "string", "maxLength": 20 },
+        "role": { "type": "string", "enum": ["OWNER", "MANAGER", "CASHIER", "KITCHEN", "STAFF"] },
+        "status": { "type": "string", "enum": ["ACTIVE", "INACTIVE"] },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["name", "email", "role", "status"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "System audit trail",
+      "type": "object",
+      "properties": {
+        "userName": { "type": "string", "maxLength": 100 },
+        "role": { "type": "string", "maxLength": 50 },
+        "action": { "type": "string", "maxLength": 100 },
+        "entity": { "type": "string", "maxLength": 50 },
+        "entityId": { "type": "string", "maxLength": 100 },
+        "details": { "type": "string", "maxLength": 500 },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["userName", "action", "entity", "timestamp"]
+    },
+    "RestaurantSettings": {
+      "title": "RestaurantSettings",
+      "description": "Global restaurant configurations",
+      "type": "object",
+      "properties": {
+        "restaurantName": { "type": "string", "maxLength": 100 },
+        "address": { "type": "string", "maxLength": 250 },
+        "phone": { "type": "string", "maxLength": 30 },
+        "email": { "type": "string", "maxLength": 100 },
+        "gstin": { "type": "string", "maxLength": 30 },
+        "fssai": { "type": "string", "maxLength": 30 },
+        "currency": { "type": "string", "maxLength": 10 },
+        "taxRate": { "type": "number" },
+        "cgstRate": { "type": "number" },
+        "sgstRate": { "type": "number" },
+        "billPrefix": { "type": "string", "maxLength": 20 },
+        "receiptFooter": { "type": "string", "maxLength": 300 },
+        "whatsappConfigured": { "type": "boolean" },
+        "whatsappPhoneNumberId": { "type": "string", "maxLength": 100 },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["restaurantName", "currency", "billPrefix"]
+    }
+  },
+  "firestore": {
+    "/categories/{categoryId}": {
+      "schema": { "$ref": "Category" },
+      "description": "Restaurant menu categories"
+    },
+    "/products/{productId}": {
+      "schema": { "$ref": "Product" },
+      "description": "Menu products and pricing"
+    },
+    "/restaurant_tables/{tableId}": {
+      "schema": { "$ref": "RestaurantTable" },
+      "description": "Floor tables and live status"
+    },
+    "/orders/{orderId}": {
+      "schema": { "$ref": "Order" },
+      "description": "Active and completed table orders"
+    },
+    "/kot_orders/{kotId}": {
+      "schema": { "$ref": "KotOrder" },
+      "description": "Live Kitchen Order Tickets"
+    },
+    "/bills/{billId}": {
+      "schema": { "$ref": "Bill" },
+      "description": "Official invoices and billing records"
+    },
+    "/customers/{customerId}": {
+      "schema": { "$ref": "Customer" },
+      "description": "Customer database and history"
+    },
+    "/expenses/{expenseId}": {
+      "schema": { "$ref": "Expense" },
+      "description": "Operational expense logs"
+    },
+    "/inventory_items/{itemId}": {
+      "schema": { "$ref": "InventoryItem" },
+      "description": "Stock inventory items"
+    },
+    "/cash_registers/{registerId}": {
+      "schema": { "$ref": "CashRegister" },
+      "description": "Cash register sessions"
+    },
+    "/staff/{staffId}": {
+      "schema": { "$ref": "Staff" },
+      "description": "Staff directory and permissions"
+    },
+    "/audit_logs/{logId}": {
+      "schema": { "$ref": "AuditLog" },
+      "description": "Audit security log events"
+    },
+    "/restaurant_settings/{settingsId}": {
+      "schema": { "$ref": "RestaurantSettings" },
+      "description": "Restaurant brand and billing settings"
+    }
+  }
+}

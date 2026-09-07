@@ -1,0 +1,6 @@
+{
+  "name": "Food Katta Restaurant POS",
+  "description": "Production restaurant POS, billing, KOT kitchen display, tables, menu, inventory, and analytics system for Food Katta.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

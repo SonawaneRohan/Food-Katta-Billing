@@ -1,0 +1,79 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Categories: Menu categories for POS
+    match /categories/{categoryId} {
+      allow read, write: if true;
+    }
+
+    // Products: Menu items and pricing
+    match /products/{productId} {
+      allow read, write: if true;
+    }
+
+    // Restaurant tables: Live table floor status
+    match /restaurant_tables/{tableId} {
+      allow read, write: if true;
+    }
+
+    // Orders: Active table & takeaway orders
+    match /orders/{orderId} {
+      allow read, write: if true;
+    }
+
+    // KOT orders: Kitchen order tickets
+    match /kot_orders/{kotId} {
+      allow read, write: if true;
+    }
+
+    // Bills: Permanent invoices & receipts
+    match /bills/{billId} {
+      allow read, write: if true;
+    }
+
+    // Customers: Customer CRM directory
+    match /customers/{customerId} {
+      allow read, write: if true;
+    }
+
+    // Expenses: Daily restaurant expenses
+    match /expenses/{expenseId} {
+      allow read, write: if true;
+    }
+
+    // Inventory: Raw materials and stock counts
+    match /inventory_items/{itemId} {
+      allow read, write: if true;
+    }
+
+    // Inventory transactions: Stock adjustments log
+    match /inventory_transactions/{txId} {
+      allow read, write: if true;
+    }
+
+    // Cash registers: Shift register floats and cash drawer
+    match /cash_registers/{registerId} {
+      allow read, write: if true;
+    }
+
+    // Staff: Staff accounts and PINs
+    match /staff/{staffId} {
+      allow read, write: if true;
+    }
+
+    // Audit logs: Activity tracking
+    match /audit_logs/{logId} {
+      allow read, write: if true;
+    }
+
+    // Restaurant settings: Business info, tax, print settings
+    match /restaurant_settings/{settingsId} {
+      allow read, write: if true;
+    }
+
+    // WhatsApp logs: Notifications log
+    match /whatsapp_logs/{logId} {
+      allow read, write: if true;
+    }
+  }
+}
