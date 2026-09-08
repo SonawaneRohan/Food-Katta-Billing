@@ -234,7 +234,7 @@ export const CustomersView: React.FC = () => {
                           </div>
                         </div>
                         <span className="font-extrabold text-neutral-900">
-                          ₹{b.grandTotal.toFixed(0)}
+                          ₹{Number(b.grandTotal || 0).toFixed(0)}
                         </span>
                       </div>
                     ))}

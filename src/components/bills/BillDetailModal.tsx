@@ -1,13 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   X,
   Printer,
   Download,
   Building,
+  Share2,
+  Sliders,
 } from 'lucide-react';
 import { Bill } from '../../types/index.ts';
 import { useRestaurant } from '../../context/RestaurantContext.tsx';
 import { downloadBillPDF, openPrintDialog } from '../../lib/pdfGenerator.ts';
+import { WhatsAppShareModal } from './WhatsAppShareModal.tsx';
+import { PrintBillModal } from './PrintBillModal.tsx';
 
 interface BillDetailModalProps {
   bill: Bill | null;
@@ -16,6 +20,8 @@ interface BillDetailModalProps {
 
 export const BillDetailModal: React.FC<BillDetailModalProps> = ({ bill, onClose }) => {
   const { settings } = useRestaurant();
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState<boolean>(false);
+  const [isWhatsAppModalOpen, setIsWhatsAppModalOpen] = useState<boolean>(false);
 
   if (!bill) return null;
 
@@ -54,7 +60,7 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({ bill, onClose 
             </h4>
             <p className="text-[11px] text-slate-500">{settings.address}</p>
             <p className="text-[11px] text-slate-500">
-              Ph: {settings.phone} {settings.gstin ? `| GSTIN: ${settings.gstin}` : ''}
+              Ph: {settings.phone} {(Number(settings.cgstRate || 0) > 0 || Number(settings.sgstRate || 0) > 0) && settings.gstin ? `| GSTIN: ${settings.gstin}` : ''}
             </p>
             {(settings.fssai || (settings as any).fssaiNumber) && (
               <p className="text-[11px] text-slate-500">FSSAI Lic: {settings.fssai || (settings as any).fssaiNumber}</p>
@@ -91,7 +97,7 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({ bill, onClose 
                 <span className="w-7/12 font-medium">{item.name}</span>
                 <span className="w-2/12 text-center">{item.quantity}</span>
                 <span className="w-3/12 text-right font-bold">
-                  ₹{(item.price * item.quantity).toFixed(2)}
+                  {(item.price * item.quantity).toFixed(2)}
                 </span>
               </div>
             ))}
@@ -103,47 +109,49 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({ bill, onClose 
           <div className="space-y-1 text-right text-[11px]">
             <div className="flex justify-between">
               <span>Subtotal:</span>
-              <span>₹{Number(bill.subtotal || 0).toFixed(2)}</span>
+              <span>{Number(bill.subtotal || 0).toFixed(2)}</span>
             </div>
 
             {Number(bill.orderDiscount || 0) > 0 && (
               <div className="flex justify-between text-emerald-600">
                 <span>Discount:</span>
-                <span>-₹{Number(bill.orderDiscount || 0).toFixed(2)}</span>
+                <span>-{Number(bill.orderDiscount || 0).toFixed(2)}</span>
               </div>
             )}
 
             {Number(bill.cgst || 0) > 0 && (
               <div className="flex justify-between text-slate-600">
-                <span>CGST (2.5%):</span>
-                <span>₹{Number(bill.cgst || 0).toFixed(2)}</span>
+                <span>CGST ({settings.cgstRate || 0}%):</span>
+                <span>{Number(bill.cgst || 0).toFixed(2)}</span>
               </div>
             )}
 
             {Number(bill.sgst || 0) > 0 && (
               <div className="flex justify-between text-slate-600">
-                <span>SGST (2.5%):</span>
-                <span>₹{Number(bill.sgst || 0).toFixed(2)}</span>
+                <span>SGST ({settings.sgstRate || 0}%):</span>
+                <span>{Number(bill.sgst || 0).toFixed(2)}</span>
               </div>
             )}
 
             {Number(bill.roundOff || 0) !== 0 && (
               <div className="flex justify-between text-slate-400">
                 <span>Round Off:</span>
-                <span>{Number(bill.roundOff) > 0 ? `+₹${Number(bill.roundOff).toFixed(2)}` : `-₹${Math.abs(Number(bill.roundOff)).toFixed(2)}`}</span>
+                <span>{Number(bill.roundOff) > 0 ? `+${Number(bill.roundOff).toFixed(2)}` : `-${Math.abs(Number(bill.roundOff)).toFixed(2)}`}</span>
               </div>
             )}
 
             <div className="border-t border-slate-800 pt-1 flex justify-between text-sm font-black text-slate-900">
               <span>GRAND TOTAL:</span>
-              <span>₹{Number(bill.grandTotal || 0).toFixed(2)}</span>
+              <span>{Number(bill.grandTotal || 0).toFixed(2)}</span>
             </div>
           </div>
 
           {/* Payment breakdown */}
           <div className="text-[11px] text-slate-600 pt-1">
             <span className="font-bold text-slate-800">Payment method: </span>
-            {bill.payments?.map((p) => `${p.method}: ₹${Number(p.amount || 0).toFixed(0)}`).join(' | ') || 'CASH'}
+            {bill.payments && bill.payments.length > 0
+              ? bill.payments.map((p) => `${p.method}: ${Number(p.amount || 0).toFixed(2)}`).join(' | ')
+              : `CASH: ${Number(bill.grandTotal || 0).toFixed(2)}`}
           </div>
 
           {/* Footer note */}
@@ -152,25 +160,50 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({ bill, onClose 
           </div>
         </div>
 
-        {/* Print & Download Actions */}
-        <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3">
+        {/* Print, WhatsApp & Download Actions */}
+        <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2.5">
           <button
-            onClick={() => openPrintDialog(bill, settings)}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold transition-colors shadow-xs"
+            onClick={() => setIsPrintModalOpen(true)}
+            className="flex-1 min-w-[120px] flex items-center justify-center gap-1.5 py-2.5 px-3 bg-slate-900 hover:bg-slate-800 active:scale-98 text-white rounded-xl text-xs font-bold transition-all shadow-xs"
+            title="Choose printer settings, copies, format, or direct print"
           >
-            <Printer className="w-4 h-4 text-amber-400" />
-            <span>Print Receipt</span>
+            <Printer className="w-4 h-4 text-orange-400" />
+            <span>Print & Printer Options</span>
+          </button>
+
+          <button
+            onClick={() => setIsWhatsAppModalOpen(true)}
+            className="flex-1 min-w-[120px] flex items-center justify-center gap-1.5 py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white rounded-xl text-xs font-bold transition-all shadow-xs shadow-emerald-600/20"
+            title="Share bill directly to customer on WhatsApp"
+          >
+            <Share2 className="w-4 h-4 text-white" />
+            <span>Share to WhatsApp</span>
           </button>
 
           <button
             onClick={() => downloadBillPDF(bill, settings)}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-white border border-slate-300 hover:bg-slate-100 text-slate-800 rounded-lg text-xs font-bold transition-colors shadow-xs"
+            className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-white border border-slate-300 hover:bg-slate-100 text-slate-800 rounded-xl text-xs font-bold transition-colors shadow-xs"
+            title="Download PDF bill to computer/phone"
           >
             <Download className="w-4 h-4 text-slate-700" />
-            <span>Download PDF</span>
+            <span className="hidden sm:inline">PDF</span>
           </button>
         </div>
       </div>
+
+      {/* Printer Settings & Multi-Printer Print Modal */}
+      <PrintBillModal
+        bill={bill}
+        isOpen={isPrintModalOpen}
+        onClose={() => setIsPrintModalOpen(false)}
+      />
+
+      {/* Direct WhatsApp Share Modal */}
+      <WhatsAppShareModal
+        bill={bill}
+        isOpen={isWhatsAppModalOpen}
+        onClose={() => setIsWhatsAppModalOpen(false)}
+      />
     </div>
   );
 };

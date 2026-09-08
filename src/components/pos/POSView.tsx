@@ -575,12 +575,14 @@ export const POSView: React.FC = () => {
             </span>
           </div>
 
-          <div className="flex justify-between text-xs text-slate-500">
-            <span>Tax (GST 5%)</span>
-            <span className="font-mono font-semibold text-slate-700">
-              ₹{(cgstAmount + sgstAmount).toFixed(2)}
-            </span>
-          </div>
+          {(cgstAmount + sgstAmount) > 0 && (
+            <div className="flex justify-between text-xs text-slate-500">
+              <span>Tax (GST)</span>
+              <span className="font-mono font-semibold text-slate-700">
+                ₹{(cgstAmount + sgstAmount).toFixed(2)}
+              </span>
+            </div>
+          )}
 
           {/* Discount Row */}
           <div className="flex items-center justify-between text-xs text-slate-500">

@@ -100,6 +100,7 @@ interface RestaurantContextType {
   deleteProduct: (productId: string) => Promise<void>;
   toggleProductAvailability: (productId: string, isAvailable: boolean) => Promise<void>;
   saveCategory: (category: Partial<Category>) => Promise<void>;
+  deleteCategory: (categoryId: string) => Promise<void>;
 
   // Customer Operations
   saveCustomer: (customer: Partial<Customer>) => Promise<Customer>;
@@ -162,7 +163,26 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     // 1. Settings
     const unsubSettings = onSnapshot(doc(db, 'restaurant_settings', 'config'), (docSnap) => {
       if (docSnap.exists()) {
-        setSettings(docSnap.data() as RestaurantSettings);
+        const currentData = docSnap.data() as RestaurantSettings;
+        // If legacy document has old default taxes or stray currency symbol/1, automatically reset them as requested by user
+        const needsTaxReset = Number(currentData.cgstRate || 0) > 0 || Number(currentData.sgstRate || 0) > 0 || Number(currentData.taxRate || 0) > 0;
+        const needsCurrencyReset = currentData.currency === '1' || currentData.currency === '₹';
+        if (needsTaxReset || needsCurrencyReset) {
+          updateDoc(doc(db, 'restaurant_settings', 'config'), {
+            cgstRate: 0,
+            sgstRate: 0,
+            taxRate: 0,
+            currency: '',
+            updatedAt: new Date().toISOString(),
+          }).catch((e) => console.warn('Note updating legacy settings:', e));
+        }
+        setSettings({
+          ...currentData,
+          currency: needsCurrencyReset ? '' : (currentData.currency ?? ''),
+          cgstRate: Number(currentData.cgstRate ?? 0),
+          sgstRate: Number(currentData.sgstRate ?? 0),
+          taxRate: Number(currentData.taxRate ?? 0),
+        });
       }
     }, (err) => console.warn('Settings listener note:', err.message));
 
@@ -472,10 +492,10 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   );
 
   const taxableAmount = Math.max(0, subtotal - totalDiscountAmount);
-  const cgstRate = settings.cgstRate || 2.5;
-  const sgstRate = settings.sgstRate || 2.5;
-  const cgstAmount = Math.round(((taxableAmount * cgstRate) / 100) * 100) / 100;
-  const sgstAmount = Math.round(((taxableAmount * sgstRate) / 100) * 100) / 100;
+  const cgstRate = Number(settings.cgstRate ?? 0);
+  const sgstRate = Number(settings.sgstRate ?? 0);
+  const cgstAmount = cgstRate > 0 ? Math.round(((taxableAmount * cgstRate) / 100) * 100) / 100 : 0;
+  const sgstAmount = sgstRate > 0 ? Math.round(((taxableAmount * sgstRate) / 100) * 100) / 100 : 0;
   const rawTotal = taxableAmount + cgstAmount + sgstAmount;
   const grandTotal = Math.round(rawTotal);
   const roundOffAmount = Math.round((grandTotal - rawTotal) * 100) / 100;
@@ -687,8 +707,8 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const effectiveSubtotal = subtotal > 0 ? subtotal : fallbackSubtotal;
     const effectiveDiscount = Number(totalDiscountAmount || 0);
     const effectiveTaxable = taxableAmount > 0 ? taxableAmount : Math.max(0, effectiveSubtotal - effectiveDiscount);
-    const effectiveCgst = cgstAmount > 0 ? cgstAmount : Number((effectiveTaxable * ((settings.cgstRate ?? 2.5) / 100)).toFixed(2));
-    const effectiveSgst = sgstAmount > 0 ? sgstAmount : Number((effectiveTaxable * ((settings.sgstRate ?? 2.5) / 100)).toFixed(2));
+    const effectiveCgst = cgstAmount > 0 ? cgstAmount : Number((effectiveTaxable * (Number(settings.cgstRate ?? 0) / 100)).toFixed(2));
+    const effectiveSgst = sgstAmount > 0 ? sgstAmount : Number((effectiveTaxable * (Number(settings.sgstRate ?? 0) / 100)).toFixed(2));
     const effectiveRoundOff = Number(roundOffAmount || 0);
     const effectiveGrandTotal = grandTotal > 0 ? grandTotal : Math.max(0, effectiveTaxable + effectiveCgst + effectiveSgst + effectiveRoundOff);
 
@@ -964,8 +984,27 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   const deleteProduct = async (productId: string) => {
-    await deleteDoc(doc(db, 'products', productId));
-    await logAudit('PRODUCT_DELETED', 'Menu', `Deleted product ${productId}`, productId);
+    // 1. Optimistically remove from state for instant UI reaction
+    setProducts((prev) => prev.filter((p) => p.id !== productId));
+    try {
+      await deleteDoc(doc(db, 'products', productId));
+      await logAudit('PRODUCT_DELETED', 'Menu', `Deleted product ${productId}`, productId);
+    } catch (err) {
+      console.error('Failed to delete product from Firestore:', err);
+      throw err;
+    }
+  };
+
+  const deleteCategory = async (categoryId: string) => {
+    // 1. Optimistically remove from state
+    setCategories((prev) => prev.filter((c) => c.id !== categoryId));
+    try {
+      await deleteDoc(doc(db, 'categories', categoryId));
+      await logAudit('CATEGORY_DELETED', 'Menu', `Deleted category ${categoryId}`, categoryId);
+    } catch (err) {
+      console.error('Failed to delete category from Firestore:', err);
+      throw err;
+    }
   };
 
   const toggleProductAvailability = async (productId: string, isAvailable: boolean) => {
@@ -1216,6 +1255,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         deleteProduct,
         toggleProductAvailability,
         saveCategory,
+        deleteCategory,
 
         saveCustomer,
         openRegister,

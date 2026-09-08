@@ -11,10 +11,13 @@ import {
   Building,
   DollarSign,
   Send,
+  Share2,
 } from 'lucide-react';
 import { useRestaurant } from '../../context/RestaurantContext.tsx';
 import { Bill, PaymentMethod } from '../../types/index.ts';
 import { BillDetailModal } from './BillDetailModal.tsx';
+import { PrintBillModal } from './PrintBillModal.tsx';
+import { WhatsAppShareModal } from './WhatsAppShareModal.tsx';
 import { downloadBillPDF, openPrintDialog } from '../../lib/pdfGenerator.ts';
 
 export const BillsHistoryView: React.FC = () => {
@@ -24,6 +27,8 @@ export const BillsHistoryView: React.FC = () => {
   const [selectedMethod, setSelectedMethod] = useState<string>('ALL');
   const [dateRange, setDateRange] = useState<'ALL' | 'TODAY' | 'WEEK' | 'MONTH'>('TODAY');
   const [selectedBill, setSelectedBill] = useState<Bill | null>(null);
+  const [billToPrint, setBillToPrint] = useState<Bill | null>(null);
+  const [billToWhatsApp, setBillToWhatsApp] = useState<Bill | null>(null);
 
   // Filter bills
   const safeBills = Array.isArray(bills) ? bills : [];
@@ -83,8 +88,14 @@ export const BillsHistoryView: React.FC = () => {
           </div>
 
           <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-2xs">
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Taxes (GST)</span>
-            <div className="text-xl font-black text-slate-900 mt-0.5">₹{totalTax.toFixed(2)}</div>
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+              {totalTax > 0 ? 'Taxes (GST)' : 'Average Order'}
+            </span>
+            <div className="text-xl font-black text-slate-900 mt-0.5">
+              {totalTax > 0
+                ? `₹${totalTax.toFixed(2)}`
+                : `₹${(filteredBills.length > 0 ? totalAmount / filteredBills.length : 0).toFixed(2)}`}
+            </div>
           </div>
 
           <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-2xs">
@@ -210,27 +221,34 @@ export const BillsHistoryView: React.FC = () => {
                         </span>
                       </td>
                       <td className="py-2.5 px-3.5 text-right font-black text-slate-900 text-sm">
-                        ₹{Number(bill.grandTotal || 0).toFixed(2)}
+                        {Number(bill.grandTotal || 0).toFixed(2)}
                       </td>
                       <td className="py-2.5 px-3.5">
                         <div className="flex items-center justify-center gap-1">
                           <button
                             onClick={() => setSelectedBill(bill)}
-                            className="p-1 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors"
-                            title="View Receipt"
+                            className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+                            title="View Receipt Details"
                           >
                             <Eye className="w-3.5 h-3.5" />
                           </button>
                           <button
-                            onClick={() => openPrintDialog(bill, settings)}
-                            className="p-1 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors"
-                            title="Print Thermal / A4"
+                            onClick={() => setBillToPrint(bill)}
+                            className="p-1.5 text-slate-600 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                            title="Print & Printer Options (Any Printer)"
                           >
                             <Printer className="w-3.5 h-3.5" />
                           </button>
                           <button
+                            onClick={() => setBillToWhatsApp(bill)}
+                            className="p-1.5 text-slate-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                            title="Share Bill directly to WhatsApp"
+                          >
+                            <Share2 className="w-3.5 h-3.5 text-emerald-600" />
+                          </button>
+                          <button
                             onClick={() => downloadBillPDF(bill, settings)}
-                            className="p-1 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors"
+                            className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
                             title="Download PDF"
                           >
                             <Download className="w-3.5 h-3.5" />
@@ -257,10 +275,24 @@ export const BillsHistoryView: React.FC = () => {
           </div>
         </div>
 
-        {/* Receipt Modal */}
+        {/* Receipt Details Modal */}
         <BillDetailModal
           bill={selectedBill}
           onClose={() => setSelectedBill(null)}
+        />
+
+        {/* Dedicated Print & Printer Options Modal */}
+        <PrintBillModal
+          bill={billToPrint}
+          isOpen={Boolean(billToPrint)}
+          onClose={() => setBillToPrint(null)}
+        />
+
+        {/* WhatsApp Share Modal */}
+        <WhatsAppShareModal
+          bill={billToWhatsApp}
+          isOpen={Boolean(billToWhatsApp)}
+          onClose={() => setBillToWhatsApp(null)}
         />
       </div>
     </div>

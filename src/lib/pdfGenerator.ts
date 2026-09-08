@@ -4,9 +4,14 @@ import { Bill, RestaurantSettings } from '../types/index.ts';
 /**
  * Generates an HTML string optimized for standard 80mm or 58mm thermal receipt printers.
  */
-export function generateReceiptHtml(bill: Bill, settings: RestaurantSettings): string {
-  const widthMm = settings.thermalPrinterWidth === '58mm' || settings.printerType === 'thermal-58mm' ? '58mm' : '80mm';
-  const currencySymbol = settings.currency || '₹';
+export function generateReceiptHtml(
+  bill: Bill,
+  settings: RestaurantSettings,
+  formatOverride?: '80mm' | '58mm' | 'a4',
+  copies: number = 1
+): string {
+  const chosenFormat = formatOverride || (settings.thermalPrinterWidth === '58mm' || settings.printerType === 'thermal-58mm' ? '58mm' : settings.printerType === 'a4' ? 'a4' : '80mm');
+  const widthMm = chosenFormat === '58mm' ? '58mm' : chosenFormat === 'a4' ? '190mm' : '80mm';
 
   const subtotal = Number(bill.subtotal || 0);
   const orderDiscount = Number(bill.orderDiscount || 0);
@@ -39,8 +44,8 @@ export function generateReceiptHtml(bill: Bill, settings: RestaurantSettings): s
   }).join('');
 
   const paymentsHtml = (bill.payments && bill.payments.length > 0)
-    ? bill.payments.map(p => `${p.method}: ${currencySymbol}${Number(p.amount || 0).toFixed(2)}${p.referenceNumber ? ` (${p.referenceNumber})` : ''}`).join('<br>')
-    : `CASH: ${currencySymbol}${grandTotal.toFixed(2)}`;
+    ? bill.payments.map(p => `${p.method}: ${Number(p.amount || 0).toFixed(2)}${p.referenceNumber ? ` (${p.referenceNumber})` : ''}`).join('<br>')
+    : `CASH: ${grandTotal.toFixed(2)}`;
 
   return `
     <!DOCTYPE html>
@@ -111,7 +116,7 @@ export function generateReceiptHtml(bill: Bill, settings: RestaurantSettings): s
           ${settings.tagline ? `<div style="font-size: 10px; margin-top: 1px;">${settings.tagline}</div>` : ''}
           <div style="font-size: 10px; margin-top: 2px;">${settings.address || ''}</div>
           <div style="font-size: 10px;">Ph: ${settings.phone || ''}</div>
-          ${settings.gstin ? `<div style="font-size: 10px;">GSTIN: ${settings.gstin}</div>` : ''}
+          ${(Number(settings.cgstRate || 0) > 0 || Number(settings.sgstRate || 0) > 0) && settings.gstin ? `<div style="font-size: 10px;">GSTIN: ${settings.gstin}</div>` : ''}
           ${settings.fssai ? `<div style="font-size: 10px;">FSSAI Lic: ${settings.fssai}</div>` : ''}
         </div>
 
@@ -152,24 +157,24 @@ export function generateReceiptHtml(bill: Bill, settings: RestaurantSettings): s
         <table>
           <tr class="totals-row">
             <td style="text-align: left;">Subtotal:</td>
-            <td style="text-align: right;">${currencySymbol}${subtotal.toFixed(2)}</td>
+            <td style="text-align: right;">${subtotal.toFixed(2)}</td>
           </tr>
           ${totalDiscount > 0 ? `
           <tr class="totals-row">
             <td style="text-align: left;">Discount:</td>
-            <td style="text-align: right;">-${currencySymbol}${totalDiscount.toFixed(2)}</td>
+            <td style="text-align: right;">-${totalDiscount.toFixed(2)}</td>
           </tr>
           ` : ''}
           ${cgst > 0 ? `
           <tr class="totals-row">
-            <td style="text-align: left;">CGST (${settings.cgstRate || 2.5}%):</td>
-            <td style="text-align: right;">${currencySymbol}${cgst.toFixed(2)}</td>
+            <td style="text-align: left;">CGST (${settings.cgstRate || 0}%):</td>
+            <td style="text-align: right;">${cgst.toFixed(2)}</td>
           </tr>
           ` : ''}
           ${sgst > 0 ? `
           <tr class="totals-row">
-            <td style="text-align: left;">SGST (${settings.sgstRate || 2.5}%):</td>
-            <td style="text-align: right;">${currencySymbol}${sgst.toFixed(2)}</td>
+            <td style="text-align: left;">SGST (${settings.sgstRate || 0}%):</td>
+            <td style="text-align: right;">${sgst.toFixed(2)}</td>
           </tr>
           ` : ''}
           ${roundOff !== 0 ? `
@@ -182,8 +187,8 @@ export function generateReceiptHtml(bill: Bill, settings: RestaurantSettings): s
 
         <div class="grand-total-box">
           <div style="display: flex; justify-content: space-between;">
-            <span>TOTAL PAYABLE:</span>
-            <span>${currencySymbol}${grandTotal.toFixed(2)}</span>
+            <span>TOTAL:</span>
+            <span>${grandTotal.toFixed(2)}</span>
           </div>
         </div>
 
@@ -208,7 +213,12 @@ export function generateReceiptHtml(bill: Bill, settings: RestaurantSettings): s
  * Triggers instant native thermal receipt print via hidden iframe.
  * This completely bypasses browser popup blockers and works directly inside embedded environments.
  */
-export function printReceiptThermal(bill: Bill, settings: RestaurantSettings): Promise<boolean> {
+export function printReceiptThermal(
+  bill: Bill,
+  settings: RestaurantSettings,
+  formatOverride?: '80mm' | '58mm' | 'a4',
+  copies: number = 1
+): Promise<boolean> {
   return new Promise((resolve) => {
     try {
       // Remove any existing print iframe to guarantee fresh content
@@ -229,7 +239,7 @@ export function printReceiptThermal(bill: Bill, settings: RestaurantSettings): P
       printIframe.style.zIndex = '-9999';
       document.body.appendChild(printIframe);
 
-      const receiptHtml = generateReceiptHtml(bill, settings);
+      const receiptHtml = generateReceiptHtml(bill, settings, formatOverride, copies);
       const frameDoc = printIframe.contentWindow?.document;
 
       if (!frameDoc) {
@@ -264,6 +274,41 @@ export function printReceiptThermal(bill: Bill, settings: RestaurantSettings): P
       resolve(false);
     }
   });
+}
+
+/**
+ * Opens receipt in dedicated print tab/window and immediately opens system printer chooser.
+ * This guarantees connection to ANY printer (Thermal USB, Bluetooth, Wi-Fi, Laser, Inkjet, or PDF)
+ * across all modern desktop and mobile browsers.
+ */
+export function openPrintWindow(
+  bill: Bill,
+  settings: RestaurantSettings,
+  formatOverride?: '80mm' | '58mm' | 'a4',
+  copies: number = 1
+): void {
+  const receiptHtml = generateReceiptHtml(bill, settings, formatOverride, copies);
+  try {
+    const printWin = window.open('', '_blank', 'width=480,height=750,menubar=no,toolbar=no,location=no,status=no');
+    if (printWin) {
+      printWin.document.open();
+      printWin.document.write(receiptHtml);
+      printWin.document.close();
+      printWin.focus();
+      setTimeout(() => {
+        try {
+          printWin.print();
+        } catch (e) {
+          console.warn('Print window print error:', e);
+        }
+      }, 400);
+      return;
+    }
+  } catch (err) {
+    console.warn('Could not open print window, falling back to iframe print:', err);
+  }
+  // Fallback
+  printReceiptThermal(bill, settings, formatOverride, copies);
 }
 
 /**
@@ -317,7 +362,7 @@ export function generateBillPDF(bill: Bill, settings: RestaurantSettings): jsPDF
     y += 3.5;
   }
 
-  if (settings.gstin) {
+  if ((Number(settings.cgstRate || 0) > 0 || Number(settings.sgstRate || 0) > 0) && settings.gstin) {
     doc.text(`GSTIN: ${settings.gstin}`, centerX, y, { align: 'center' });
     y += 3.5;
   }
@@ -409,24 +454,24 @@ export function generateBillPDF(bill: Bill, settings: RestaurantSettings): jsPDF
   // Totals calculations
   doc.setFontSize(7.5);
   doc.text('Subtotal:', 38, y);
-  doc.text(`${currencySymbol} ${subtotal.toFixed(2)}`, receiptWidth - 4, y, { align: 'right' });
+  doc.text(`${subtotal.toFixed(2)}`, receiptWidth - 4, y, { align: 'right' });
   y += 3.5;
 
   if (totalDiscount > 0) {
     doc.text('Discount:', 38, y);
-    doc.text(`-${currencySymbol} ${totalDiscount.toFixed(2)}`, receiptWidth - 4, y, { align: 'right' });
+    doc.text(`-${totalDiscount.toFixed(2)}`, receiptWidth - 4, y, { align: 'right' });
     y += 3.5;
   }
 
   if (cgst > 0) {
-    doc.text(`CGST (${settings.cgstRate || 2.5}%):`, 38, y);
-    doc.text(`${currencySymbol} ${cgst.toFixed(2)}`, receiptWidth - 4, y, { align: 'right' });
+    doc.text(`CGST (${settings.cgstRate || 0}%):`, 38, y);
+    doc.text(`${cgst.toFixed(2)}`, receiptWidth - 4, y, { align: 'right' });
     y += 3.5;
   }
 
   if (sgst > 0) {
-    doc.text(`SGST (${settings.sgstRate || 2.5}%):`, 38, y);
-    doc.text(`${currencySymbol} ${sgst.toFixed(2)}`, receiptWidth - 4, y, { align: 'right' });
+    doc.text(`SGST (${settings.sgstRate || 0}%):`, 38, y);
+    doc.text(`${sgst.toFixed(2)}`, receiptWidth - 4, y, { align: 'right' });
     y += 3.5;
   }
 
@@ -442,8 +487,8 @@ export function generateBillPDF(bill: Bill, settings: RestaurantSettings): jsPDF
   doc.rect(4, y - 2, receiptWidth - 8, 7, 'F');
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
-  doc.text('TOTAL PAYABLE:', 6, y + 2.5);
-  doc.text(`${currencySymbol} ${grandTotal.toFixed(2)}`, receiptWidth - 6, y + 2.5, { align: 'right' });
+  doc.text('TOTAL:', 6, y + 2.5);
+  doc.text(`${grandTotal.toFixed(2)}`, receiptWidth - 6, y + 2.5, { align: 'right' });
   y += 8;
 
   // Payments
@@ -451,7 +496,7 @@ export function generateBillPDF(bill: Bill, settings: RestaurantSettings): jsPDF
   doc.setFontSize(7);
   if (bill.payments && bill.payments.length > 0) {
     const paymentDesc = bill.payments
-      .map(p => `${p.method}: ${currencySymbol}${Number(p.amount || 0).toFixed(2)}${p.referenceNumber ? ` (${p.referenceNumber})` : ''}`)
+      .map(p => `${p.method}: ${Number(p.amount || 0).toFixed(2)}${p.referenceNumber ? ` (${p.referenceNumber})` : ''}`)
       .join(' | ');
     doc.text(`Payment: ${paymentDesc}`, 4, y);
     y += 4;
@@ -477,6 +522,17 @@ export function generateBillPDF(bill: Bill, settings: RestaurantSettings): jsPDF
   return doc;
 }
 
+export function getBillPdfBlob(bill: Bill, settings: RestaurantSettings): Blob {
+  const doc = generateBillPDF(bill, settings);
+  return doc.output('blob');
+}
+
+export function getBillPdfFile(bill: Bill, settings: RestaurantSettings): File {
+  const blob = getBillPdfBlob(bill, settings);
+  const cleanBillNo = (bill.billNumber || 'Food_Katta_Bill').replace(/[^a-zA-Z0-9_-]/g, '_');
+  return new File([blob], `${cleanBillNo}.pdf`, { type: 'application/pdf' });
+}
+
 export function downloadBillPDF(bill: Bill, settings: RestaurantSettings) {
   try {
     const doc = generateBillPDF(bill, settings);
@@ -489,8 +545,13 @@ export function downloadBillPDF(bill: Bill, settings: RestaurantSettings) {
 }
 
 /**
- * Universal print dialog trigger: performs direct thermal print, bypassing popup blockers.
+ * Universal print dialog trigger: performs direct print to any printer, bypassing popup blockers.
  */
-export function openPrintDialog(bill: Bill, settings: RestaurantSettings) {
-  printReceiptThermal(bill, settings);
+export function openPrintDialog(
+  bill: Bill,
+  settings: RestaurantSettings,
+  formatOverride?: '80mm' | '58mm' | 'a4',
+  copies: number = 1
+) {
+  openPrintWindow(bill, settings, formatOverride, copies);
 }

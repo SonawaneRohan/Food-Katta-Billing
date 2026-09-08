@@ -131,7 +131,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       case 'MENU_CREATE_PRODUCT':
         return role === 'MANAGER';
       case 'MENU_DELETE_PRODUCT':
-        return role === 'OWNER'; // Only owner can delete
+        return role === 'OWNER' || role === 'MANAGER';
       case 'INVENTORY_ACCESS':
         return role === 'MANAGER';
       case 'EXPENSES_ACCESS':

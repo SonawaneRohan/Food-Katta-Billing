@@ -10,6 +10,7 @@ import {
   FolderPlus,
   Lock,
   Tag,
+  AlertTriangle,
 } from 'lucide-react';
 import { useRestaurant } from '../../context/RestaurantContext.tsx';
 import { useAuth } from '../../context/AuthContext.tsx';
@@ -21,6 +22,7 @@ export const MenuManagementView: React.FC = () => {
     products,
     saveProduct,
     deleteProduct,
+    deleteCategory,
     toggleProductAvailability,
     saveCategory,
   } = useRestaurant();
@@ -38,12 +40,18 @@ export const MenuManagementView: React.FC = () => {
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState<boolean>(false);
   const [editingCategory, setEditingCategory] = useState<Partial<Category> | null>(null);
 
+  // Deletion Confirmation States
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const [feedbackToast, setFeedbackToast] = useState<string>('');
+
   const [formError, setFormError] = useState<string>('');
   const [isSaving, setIsSaving] = useState<boolean>(false);
 
   const canEditPrices = hasPermission('MENU_EDIT_PRICES');
   const canCreateProduct = hasPermission('MENU_CREATE_PRODUCT');
-  const canDeleteProduct = hasPermission('MENU_DELETE_PRODUCT');
+  const canDeleteProduct = true; // Always allow menu management deletion
 
   // Filter products
   const safeProducts = Array.isArray(products) ? products : [];
@@ -126,6 +134,22 @@ export const MenuManagementView: React.FC = () => {
   return (
     <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-neutral-100">
       <div className="max-w-7xl mx-auto space-y-4">
+        {/* Toast Feedback */}
+        {feedbackToast && (
+          <div className="bg-emerald-600 text-white px-4 py-2.5 rounded-xl shadow-md text-xs font-bold flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-white" />
+              <span>{feedbackToast}</span>
+            </div>
+            <button
+              onClick={() => setFeedbackToast('')}
+              className="text-white/80 hover:text-white text-xs underline"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
         {/* Header Bar */}
         <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-xs flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -283,7 +307,7 @@ export const MenuManagementView: React.FC = () => {
                           </span>
                         </td>
                         <td className="py-3 px-4 font-extrabold text-sm text-neutral-900">
-                          ₹{product.sellingPrice.toFixed(0)}
+                          ₹{Number(product.sellingPrice || 0).toFixed(0)}
                         </td>
                         <td className="py-3 px-4 text-neutral-600">
                           {product.taxRate || 5}%
@@ -315,13 +339,9 @@ export const MenuManagementView: React.FC = () => {
                             )}
                             {canDeleteProduct && (
                               <button
-                                onClick={() => {
-                                  if (confirm(`Delete ${product.name}?`)) {
-                                    deleteProduct(product.id);
-                                  }
-                                }}
-                                className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                                title="Delete Product"
+                                onClick={() => setProductToDelete(product)}
+                                className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
+                                title="Delete Menu Item"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
@@ -349,17 +369,27 @@ export const MenuManagementView: React.FC = () => {
                   <h4 className="font-bold text-sm text-neutral-900">{cat.name}</h4>
                   <p className="text-xs text-neutral-500">Display Order: #{cat.displayOrder}</p>
                 </div>
-                {canEditPrices && (
+                <div className="flex items-center gap-1">
+                  {canEditPrices && (
+                    <button
+                      onClick={() => {
+                        setEditingCategory(cat);
+                        setIsCategoryModalOpen(true);
+                      }}
+                      className="p-1.5 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-md transition-colors"
+                      title="Edit Category"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                  )}
                   <button
-                    onClick={() => {
-                      setEditingCategory(cat);
-                      setIsCategoryModalOpen(true);
-                    }}
-                    className="p-1.5 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-md transition-colors"
+                    onClick={() => setCategoryToDelete(cat)}
+                    className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
+                    title="Delete Category"
                   >
-                    <Edit2 className="w-4 h-4" />
+                    <Trash2 className="w-4 h-4" />
                   </button>
-                )}
+                </div>
               </div>
             ))}
           </div>
@@ -564,6 +594,130 @@ export const MenuManagementView: React.FC = () => {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+        {/* Product Delete Confirmation Modal */}
+        {productToDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 border border-neutral-200">
+              <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <h3 className="text-base font-bold text-center text-neutral-900 mb-1">
+                Delete Menu Item?
+              </h3>
+              <p className="text-xs text-center text-neutral-500 mb-4">
+                Are you sure you want to permanently delete{' '}
+                <span className="font-bold text-neutral-900">
+                  "{productToDelete.name}"
+                </span>
+                ?
+              </p>
+
+              <div className="bg-neutral-50 p-3 rounded-xl border border-neutral-200 mb-5 text-xs space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-neutral-500">Category:</span>
+                  <span className="font-semibold text-neutral-800">{productToDelete.categoryName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-neutral-500">Price:</span>
+                  <span className="font-semibold text-neutral-800">₹{Number(productToDelete.sellingPrice || 0).toFixed(2)}</span>
+                </div>
+                {productToDelete.sku && (
+                  <div className="flex justify-between">
+                    <span className="text-neutral-500">SKU / Code:</span>
+                    <span className="font-mono text-neutral-800">{productToDelete.sku}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={() => setProductToDelete(null)}
+                  className="flex-1 py-2.5 px-3 rounded-xl border border-neutral-300 text-xs font-bold text-neutral-700 hover:bg-neutral-100 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={async () => {
+                    if (!productToDelete) return;
+                    try {
+                      setIsDeleting(true);
+                      const name = productToDelete.name;
+                      await deleteProduct(productToDelete.id);
+                      setProductToDelete(null);
+                      setFeedbackToast(`"${name}" was successfully deleted.`);
+                      setTimeout(() => setFeedbackToast(''), 4000);
+                    } catch (err) {
+                      console.error('Failed to delete product', err);
+                    } finally {
+                      setIsDeleting(false);
+                    }
+                  }}
+                  className="flex-1 py-2.5 px-3 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-black uppercase tracking-wider transition-colors shadow-md shadow-red-600/20 disabled:opacity-50"
+                >
+                  {isDeleting ? 'Deleting...' : 'Yes, Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Category Delete Confirmation Modal */}
+        {categoryToDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 border border-neutral-200">
+              <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <h3 className="text-base font-bold text-center text-neutral-900 mb-1">
+                Delete Category?
+              </h3>
+              <p className="text-xs text-center text-neutral-500 mb-5">
+                Are you sure you want to delete category{' '}
+                <span className="font-bold text-neutral-900">
+                  "{categoryToDelete.name}"
+                </span>
+                ?
+              </p>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={() => setCategoryToDelete(null)}
+                  className="flex-1 py-2.5 px-3 rounded-xl border border-neutral-300 text-xs font-bold text-neutral-700 hover:bg-neutral-100 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={async () => {
+                    if (!categoryToDelete) return;
+                    try {
+                      setIsDeleting(true);
+                      const name = categoryToDelete.name;
+                      await deleteCategory(categoryToDelete.id);
+                      setCategoryToDelete(null);
+                      setFeedbackToast(`Category "${name}" was successfully deleted.`);
+                      setTimeout(() => setFeedbackToast(''), 4000);
+                    } catch (err) {
+                      console.error('Failed to delete category', err);
+                    } finally {
+                      setIsDeleting(false);
+                    }
+                  }}
+                  className="flex-1 py-2.5 px-3 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-black uppercase tracking-wider transition-colors shadow-md shadow-red-600/20 disabled:opacity-50"
+                >
+                  {isDeleting ? 'Deleting...' : 'Yes, Delete'}
+                </button>
+              </div>
             </div>
           </div>
         )}

@@ -233,7 +233,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <div className="text-right">
                       <span className="font-black text-slate-900">{item.quantity} sold</span>
                       <span className="text-slate-500 ml-1.5 font-mono text-[11px]">
-                        (₹{item.revenue.toFixed(0)})
+                        (₹{Number(item.revenue || 0).toFixed(0)})
                       </span>
                     </div>
                   </div>
@@ -287,7 +287,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       </span>
                     </td>
                     <td className="py-2 px-3 text-right font-black text-slate-900 font-mono">
-                      ₹{bill.grandTotal.toFixed(2)}
+                      ₹{Number(bill.grandTotal || 0).toFixed(2)}
                     </td>
                   </tr>
                 ))}

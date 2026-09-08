@@ -189,7 +189,7 @@ export const CashRegisterView: React.FC = () => {
                     Opening Float
                   </span>
                   <div className="text-lg font-black text-slate-900 mt-0.5 font-mono">
-                    ₹{activeRegister.openingCash.toFixed(2)}
+                    ₹{Number(activeRegister.openingCash || 0).toFixed(2)}
                   </div>
                   <div className="text-[10px] text-slate-400 font-mono mt-0.5">
                     {activeRegister.openingTime || activeRegister.openedAt
@@ -207,7 +207,7 @@ export const CashRegisterView: React.FC = () => {
                     <ArrowDownRight className="w-3.5 h-3.5 text-emerald-600" />
                   </div>
                   <div className="text-lg font-black text-emerald-900 mt-0.5 font-mono">
-                    ₹{totalCashSales.toFixed(2)}
+                    ₹{Number(totalCashSales || 0).toFixed(2)}
                   </div>
                   <div className="text-[10px] text-emerald-700 mt-0.5 font-medium">From cash receipts</div>
                 </div>
@@ -218,7 +218,7 @@ export const CashRegisterView: React.FC = () => {
                     <ArrowUpRight className="w-3.5 h-3.5 text-rose-600" />
                   </div>
                   <div className="text-lg font-black text-rose-900 mt-0.5 font-mono">
-                    ₹{totalCashExpenses.toFixed(2)}
+                    ₹{Number(totalCashExpenses || 0).toFixed(2)}
                   </div>
                   <div className="text-[10px] text-rose-700 mt-0.5 font-medium">Raw material / petty cash</div>
                 </div>
@@ -228,7 +228,7 @@ export const CashRegisterView: React.FC = () => {
                     Expected in Drawer
                   </span>
                   <div className="text-lg font-black text-amber-400 mt-0.5 font-mono">
-                    ₹{expectedDrawerCash.toFixed(2)}
+                    ₹{Number(expectedDrawerCash || 0).toFixed(2)}
                   </div>
                   <div className="text-[10px] text-slate-400 mt-0.5 font-medium">Calculated total</div>
                 </div>
@@ -269,11 +269,11 @@ export const CashRegisterView: React.FC = () => {
                       }`}
                     >
                       <span>
-                        {discrepancy === 0
+                        {Number(discrepancy || 0) === 0
                           ? 'Exact Match (₹0.00)'
-                          : discrepancy < 0
-                          ? `Shortage: -₹${Math.abs(discrepancy).toFixed(2)}`
-                          : `Excess: +₹${discrepancy.toFixed(2)}`}
+                          : Number(discrepancy || 0) < 0
+                          ? `Shortage: -₹${Math.abs(Number(discrepancy || 0)).toFixed(2)}`
+                          : `Excess: +₹${Number(discrepancy || 0).toFixed(2)}`}
                       </span>
                       {discrepancy === 0 ? (
                         <CheckCircle2 className="w-4 h-4 text-emerald-600" />
@@ -318,8 +318,8 @@ export const CashRegisterView: React.FC = () => {
                   </h3>
                   <p className="text-xs text-slate-600 font-medium">
                     This will finalize today's cash shift with expected cash of{' '}
-                    <strong>₹{expectedDrawerCash.toFixed(2)}</strong> and actual cash count of{' '}
-                    <strong>₹{actualCashInDrawer.toFixed(2)}</strong>.
+                    <strong>₹{Number(expectedDrawerCash || 0).toFixed(2)}</strong> and actual cash count of{' '}
+                    <strong>₹{Number(actualCashInDrawer || 0).toFixed(2)}</strong>.
                   </p>
                   <div className="flex justify-end gap-2 pt-1">
                     <button

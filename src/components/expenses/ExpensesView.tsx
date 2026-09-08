@@ -148,7 +148,7 @@ export const ExpensesView: React.FC = () => {
                       </span>
                     </td>
                     <td className="py-2.5 px-3.5 text-right font-black text-slate-900 font-mono text-sm">
-                      ₹{exp.amount.toFixed(2)}
+                      ₹{Number(exp.amount || 0).toFixed(2)}
                     </td>
                   </tr>
                 ))}

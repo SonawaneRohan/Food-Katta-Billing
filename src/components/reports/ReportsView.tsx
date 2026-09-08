@@ -252,10 +252,10 @@ export const ReportsView: React.FC = () => {
                         <td className="py-2.5 px-3 text-neutral-600">{new Date(b.createdAt).toLocaleDateString('en-IN')}</td>
                         <td className="py-2.5 px-3">{b.tableName || b.orderType}</td>
                         <td className="py-2.5 px-3 text-neutral-600">{b.cashierName}</td>
-                        <td className="py-2.5 px-3 text-right">₹{b.subtotal.toFixed(0)}</td>
-                        <td className="py-2.5 px-3 text-right text-rose-600">-₹{b.orderDiscount.toFixed(0)}</td>
-                        <td className="py-2.5 px-3 text-right">₹{(b.cgst + b.sgst).toFixed(0)}</td>
-                        <td className="py-2.5 px-3 text-right font-black text-neutral-900">₹{b.grandTotal.toFixed(2)}</td>
+                        <td className="py-2.5 px-3 text-right">₹{Number(b.subtotal || 0).toFixed(0)}</td>
+                        <td className="py-2.5 px-3 text-right text-rose-600">-₹{Number(b.orderDiscount || 0).toFixed(0)}</td>
+                        <td className="py-2.5 px-3 text-right">₹{(Number(b.cgst || 0) + Number(b.sgst || 0)).toFixed(0)}</td>
+                        <td className="py-2.5 px-3 text-right font-black text-neutral-900">₹{Number(b.grandTotal || 0).toFixed(2)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -290,7 +290,7 @@ export const ReportsView: React.FC = () => {
                       <td className="py-2.5 px-3 text-neutral-600">{i.category}</td>
                       <td className="py-2.5 px-3 text-center font-bold">{i.quantity}</td>
                       <td className="py-2.5 px-3 text-right font-black text-neutral-900">
-                        ₹{i.revenue.toFixed(2)}
+                        ₹{Number(i.revenue || 0).toFixed(2)}
                       </td>
                     </tr>
                   ))}

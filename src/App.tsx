@@ -25,12 +25,20 @@ import { ReportsView } from './components/reports/ReportsView.tsx';
 import { StaffView } from './components/staff/StaffView.tsx';
 import { AuditLogView } from './components/audit-log/AuditLogView.tsx';
 import { SettingsView } from './components/settings/SettingsView.tsx';
+import { PublicBillView } from './components/bills/PublicBillView.tsx';
 import { RestaurantTable } from './types/index.ts';
 
 const AppContent: React.FC = () => {
   const [currentView, setCurrentView] = useState<string>('pos');
   const [isShortcutsOpen, setIsShortcutsOpen] = useState<boolean>(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState<boolean>(false);
+  const [publicBillId, setPublicBillId] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('billId') || params.get('bill');
+    }
+    return null;
+  });
 
   const { currentStaff } = useAuth();
   const { loadTableOrder, activeRegister, settings, tables, kotOrders } = useRestaurant();
@@ -88,6 +96,23 @@ const AppContent: React.FC = () => {
     loadTableOrder(table);
     setCurrentView('pos');
   };
+
+  if (publicBillId) {
+    return (
+      <PublicBillView
+        billId={publicBillId}
+        settings={settings}
+        onBackToPos={() => {
+          if (typeof window !== 'undefined' && window.history.pushState) {
+            const newUrl = window.location.pathname;
+            window.history.pushState({ path: newUrl }, '', newUrl);
+          }
+          setPublicBillId(null);
+          setCurrentView('pos');
+        }}
+      />
+    );
+  }
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-slate-50 text-slate-900 font-sans antialiased select-none">

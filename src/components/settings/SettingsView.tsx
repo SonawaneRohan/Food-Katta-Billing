@@ -301,9 +301,9 @@ export const SettingsView: React.FC = () => {
                 <input
                   id="input-currency"
                   type="text"
-                  value={formData.currency || '₹'}
+                  value={formData.currency ?? ''}
                   onChange={(e) => handleFieldChange('currency', e.target.value)}
-                  placeholder="₹"
+                  placeholder="Leave empty for plain numbers (e.g. 250.00)"
                   className="w-full px-3 py-1.5 border border-slate-200 rounded-md bg-slate-50 text-slate-900 font-bold focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
               </div>
@@ -384,6 +384,13 @@ export const SettingsView: React.FC = () => {
                 />
               </div>
             </div>
+
+            {Number(formData.cgstRate || 0) === 0 && Number(formData.sgstRate || 0) === 0 && (
+              <div className="p-2 bg-emerald-50 border border-emerald-200 rounded text-[11px] text-emerald-800 flex items-center gap-1.5 font-medium">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <span>GST and SGST are disabled (0%). Bills will strictly display items and the total without any tax additions.</span>
+              </div>
+            )}
 
             <div className="text-xs">
               <label className="block font-bold text-slate-700 uppercase text-[10px] tracking-wider mb-1">

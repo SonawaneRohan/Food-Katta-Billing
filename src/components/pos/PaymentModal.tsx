@@ -9,10 +9,13 @@ import {
   Download,
   CheckCircle2,
   AlertCircle,
+  Share2,
 } from 'lucide-react';
 import { useRestaurant } from '../../context/RestaurantContext.tsx';
 import { SplitPayment, PaymentMethod, Bill } from '../../types/index.ts';
 import { downloadBillPDF, openPrintDialog } from '../../lib/pdfGenerator.ts';
+import { PrintBillModal } from '../bills/PrintBillModal.tsx';
+import { WhatsAppShareModal } from '../bills/WhatsAppShareModal.tsx';
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -47,6 +50,8 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
   // Success state after bill is created
   const [createdBill, setCreatedBill] = useState<Bill | null>(null);
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState<boolean>(false);
+  const [isWhatsAppModalOpen, setIsWhatsAppModalOpen] = useState<boolean>(false);
 
   // Initialize tender state only when modal opens
   useEffect(() => {
@@ -149,6 +154,18 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const handleAfterWhatsAppShare = () => {
+    setIsWhatsAppModalOpen(false);
+    setCreatedBill(null);
+    onSuccess();
+    onClose();
+  };
+
+  const handleStartNewOrder = () => {
+    setCreatedBill(null);
+    onClose();
   };
 
   return (
@@ -484,44 +501,74 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                   {createdBill.billNumber}
                 </h4>
                 <p className="text-xs text-slate-600 mt-1">
-                  Paid ₹{createdBill.grandTotal.toFixed(2)} via{' '}
-                  {createdBill.payments.map((p) => p.method).join(' + ')}
+                  Paid ₹{Number(createdBill.grandTotal || 0).toFixed(2)} via{' '}
+                  {createdBill.payments?.map((p) => p.method).join(' + ') || 'CASH'}
                 </p>
               </div>
 
               {/* Primary Bill Output Actions */}
-              <div className="grid grid-cols-2 gap-3 max-w-sm mx-auto">
+              <div className="space-y-2 max-w-sm mx-auto">
                 <button
                   type="button"
-                  onClick={() => openPrintDialog(createdBill, settings)}
-                  className="flex items-center justify-center gap-2 p-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-black uppercase tracking-wider transition-all shadow-md shadow-amber-600/20 active:scale-95"
+                  onClick={() => setIsPrintModalOpen(true)}
+                  className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-xs font-black uppercase tracking-wider transition-all shadow-md shadow-orange-500/20 active:scale-95"
                 >
                   <Printer className="w-4 h-4 text-white" />
-                  <span>Print Receipt</span>
+                  <span>Print & Printer Options (Any Printer)</span>
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => downloadBillPDF(createdBill, settings)}
-                  className="flex items-center justify-center gap-2 p-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-colors border border-slate-200 active:scale-95"
-                >
-                  <Download className="w-4 h-4 text-slate-700" />
-                  <span>Download PDF</span>
-                </button>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsWhatsAppModalOpen(true)}
+                    className="flex items-center justify-center gap-1.5 p-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs active:scale-95"
+                  >
+                    <Share2 className="w-4 h-4 text-white" />
+                    <span>Send PDF to WhatsApp</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => downloadBillPDF(createdBill, settings)}
+                    className="flex items-center justify-center gap-1.5 p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-colors border border-slate-200 active:scale-95"
+                  >
+                    <Download className="w-4 h-4 text-slate-700" />
+                    <span>Download PDF</span>
+                  </button>
+                </div>
               </div>
 
               <div className="pt-2">
                 <button
                   type="button"
-                  onClick={onClose}
+                  onClick={handleStartNewOrder}
                   className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-colors"
                 >
-                  Start New Order
+                  Start New Order (Back to Billing)
                 </button>
               </div>
             </div>
           )}
         </div>
+
+        {/* Dedicated Print & Printer Options Modal */}
+        {createdBill && (
+          <PrintBillModal
+            bill={createdBill}
+            isOpen={isPrintModalOpen}
+            onClose={() => setIsPrintModalOpen(false)}
+          />
+        )}
+
+        {/* WhatsApp Share Modal with auto-redirection to billing system */}
+        {createdBill && (
+          <WhatsAppShareModal
+            bill={createdBill}
+            isOpen={isWhatsAppModalOpen}
+            onClose={() => setIsWhatsAppModalOpen(false)}
+            onAfterShare={handleAfterWhatsAppShare}
+          />
+        )}
       </div>
     </div>
   );
