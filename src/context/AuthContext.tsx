@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { onAuthStateChanged, User, signInWithPopup, signOut } from 'firebase/auth';
-import { collection, onSnapshot, addDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase.ts';
 import { StaffMember, UserRole, AuditLog } from '../types/index.ts';
 import { INITIAL_STAFF } from '../lib/seedData.ts';
@@ -11,6 +11,8 @@ interface AuthContextType {
   allStaff: StaffMember[];
   switchStaff: (staffId: string) => Promise<void>;
   updateStaffRole: (staffId: string, role: UserRole) => Promise<void>;
+  updateStaffMember: (staffId: string, updates: Partial<StaffMember>) => Promise<void>;
+  deleteStaffMember: (staffId: string) => Promise<void>;
   createStaffMember: (member: Omit<StaffMember, 'id' | 'createdAt'>) => Promise<void>;
   toggleStaffStatus: (staffId: string) => Promise<void>;
   hasPermission: (permission: string) => boolean;
@@ -43,6 +45,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (activeCurrent) {
           setCurrentStaff(activeCurrent);
         }
+      } else {
+        // Automatically seed initial staff documents if collection is empty
+        Promise.all(
+          INITIAL_STAFF.map(member =>
+            setDoc(doc(db, 'staff', member.id), member, { merge: true })
+          )
+        ).catch(e => console.warn('Staff initial seeding note:', e));
       }
       setIsLoading(false);
     }, (err) => {
@@ -71,9 +80,63 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateStaffRole = async (staffId: string, role: UserRole) => {
     try {
       await updateDoc(doc(db, 'staff', staffId), { role });
+      setAllStaff(prev => prev.map(s => s.id === staffId ? { ...s, role } : s));
+      if (currentStaff.id === staffId) {
+        setCurrentStaff(prev => ({ ...prev, role }));
+      }
       await logAudit('ROLE_UPDATED', 'Staff', `Updated role of staff ${staffId} to ${role}`, staffId);
     } catch (error) {
       console.error('Failed to update staff role:', error);
+      throw error;
+    }
+  };
+
+  const updateStaffMember = async (staffId: string, updates: Partial<StaffMember>) => {
+    try {
+      await updateDoc(doc(db, 'staff', staffId), {
+        ...updates,
+        updatedAt: new Date().toISOString(),
+      });
+      setAllStaff(prev => prev.map(s => (s.id === staffId ? { ...s, ...updates } : s)));
+      if (currentStaff.id === staffId) {
+        setCurrentStaff(prev => ({ ...prev, ...updates }));
+      }
+      await logAudit('STAFF_UPDATED', 'Staff', `Updated staff member ${updates.name || staffId}`, staffId);
+    } catch (error) {
+      console.error('Failed to update staff member:', error);
+      throw error;
+    }
+  };
+
+  const deleteStaffMember = async (staffId: string) => {
+    try {
+      const memberToDelete = allStaff.find(s => s.id === staffId);
+      if (!memberToDelete) {
+        throw new Error('Staff member not found.');
+      }
+
+      // Safety: Cannot delete current active user
+      if (currentStaff.id === staffId) {
+        throw new Error('You cannot delete your own active staff account while in use.');
+      }
+
+      // Safety: Cannot delete the last active owner
+      const activeOwners = allStaff.filter(s => s.role === 'OWNER' && s.status === 'ACTIVE');
+      if (memberToDelete.role === 'OWNER' && activeOwners.length <= 1) {
+        throw new Error('Cannot delete the only Owner. Assign another active Owner before removing this account.');
+      }
+
+      await deleteDoc(doc(db, 'staff', staffId));
+      setAllStaff(prev => prev.filter(s => s.id !== staffId));
+
+      await logAudit(
+        'STAFF_DELETED',
+        'Staff',
+        `Deleted staff member: ${memberToDelete.name} (${memberToDelete.role})`,
+        staffId
+      );
+    } catch (error) {
+      console.error('Failed to delete staff member:', error);
       throw error;
     }
   };
@@ -141,7 +204,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       case 'SETTINGS_ACCESS':
         return false; // Owner only
       case 'STAFF_MANAGEMENT':
-        return false; // Owner only
+      case 'STAFF_MANAGE':
+        return role === 'MANAGER';
       case 'AUDIT_LOGS_VIEW':
         return role === 'MANAGER'; // Cashier cannot view
       case 'CASH_REGISTER_ACCESS':
@@ -182,6 +246,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         allStaff,
         switchStaff,
         updateStaffRole,
+        updateStaffMember,
+        deleteStaffMember,
         createStaffMember,
         toggleStaffStatus,
         hasPermission,
