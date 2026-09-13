@@ -55,14 +55,14 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({ bill, onClose 
         <div className="p-6 overflow-y-auto space-y-4 font-mono text-xs text-slate-800 bg-white">
           {/* Restaurant Header */}
           <div className="text-center space-y-1">
-            <div className="flex justify-center mb-1">
+            <div className="flex justify-center mb-2">
               <img
-                src="/assets/food_katta_logo.jpg"
+                src="/assets/food_katta_logo_round.png"
                 alt="Food Katta"
-                className="w-12 h-12 rounded-full object-cover border border-slate-300 shadow-xs"
+                className="w-14 h-14 rounded-full object-cover border-2 border-slate-900 shadow-sm block"
               />
             </div>
-            <h4 className="text-base font-black text-slate-900 tracking-tight">
+            <h4 className="text-base font-black text-slate-900 tracking-tight leading-tight">
               {settings.restaurantName}
             </h4>
             <p className="text-[11px] text-slate-500">{settings.address}</p>

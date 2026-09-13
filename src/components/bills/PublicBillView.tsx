@@ -103,11 +103,11 @@ export const PublicBillView: React.FC<PublicBillViewProps> = ({
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
         {/* Receipt Header Banner */}
         <div className="bg-emerald-700 p-5 text-white text-center">
-          <div className="flex justify-center mb-2">
+          <div className="flex justify-center mb-3">
             <img
-              src="/assets/food_katta_logo.jpg"
+              src="/assets/food_katta_logo_round.png"
               alt="Food Katta"
-              className="w-16 h-16 rounded-full object-cover border-2 border-white/80 shadow-md"
+              className="w-16 h-16 rounded-full object-cover border-2 border-white/90 shadow-md block"
             />
           </div>
           <h1 className="text-lg font-black uppercase tracking-wide">

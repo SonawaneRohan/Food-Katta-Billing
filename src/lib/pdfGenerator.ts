@@ -1,17 +1,20 @@
 import { jsPDF } from 'jspdf';
 import { Bill, RestaurantSettings } from '../types/index.ts';
+import { FOOD_KATTA_CIRCULAR_LOGO_BASE64 } from './logoBase64.ts';
 
-// In-memory cache for Food Katta official logo base64
-let cachedLogoDataUri: string | null = null;
+// In-memory cache for Food Katta official logo base64 (defaults to circular logo)
+let cachedLogoDataUri: string = FOOD_KATTA_CIRCULAR_LOGO_BASE64;
 
-// Preload the logo into memory on client startup
+// Preload the round logo into memory on client startup if browser environment
 if (typeof window !== 'undefined') {
-  fetch('/assets/food_katta_logo.jpg')
+  fetch('/assets/food_katta_logo_round.png')
     .then((r) => r.blob())
     .then((blob) => {
       const reader = new FileReader();
       reader.onloadend = () => {
-        cachedLogoDataUri = reader.result as string;
+        if (reader.result) {
+          cachedLogoDataUri = reader.result as string;
+        }
       };
       reader.readAsDataURL(blob);
     })
@@ -21,25 +24,9 @@ if (typeof window !== 'undefined') {
 /**
  * Preloads the logo data URI if not yet loaded in memory
  */
-export async function preloadBillLogo(): Promise<string | null> {
+export async function preloadBillLogo(): Promise<string> {
   if (cachedLogoDataUri) return cachedLogoDataUri;
-  if (typeof window === 'undefined') return null;
-  try {
-    const res = await fetch('/assets/food_katta_logo.jpg');
-    if (!res.ok) return null;
-    const blob = await res.blob();
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        cachedLogoDataUri = reader.result as string;
-        resolve(cachedLogoDataUri);
-      };
-      reader.onerror = () => resolve(null);
-      reader.readAsDataURL(blob);
-    });
-  } catch {
-    return null;
-  }
+  return FOOD_KATTA_CIRCULAR_LOGO_BASE64;
 }
 
 /**
@@ -155,12 +142,12 @@ export function generateReceiptHtml(
         </style>
       </head>
       <body>
-        <div class="text-center">
-          <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 4px;">
-            <img src="${logoSrc}" alt="Food Katta" style="width: 52px; height: 52px; border-radius: 50%; object-fit: cover; display: inline-block; border: 1.5px solid #222;" onerror="this.style.display='none'" />
+        <div class="text-center" style="margin-bottom: 8px;">
+          <div style="display: block; margin: 0 auto 6px auto; text-align: center; clear: both;">
+            <img src="${logoSrc}" alt="Food Katta" style="width: 54px; height: 54px; border-radius: 50%; object-fit: cover; display: inline-block; border: 2px solid #111; box-sizing: border-box;" onerror="this.style.display='none'" />
           </div>
-          <div style="font-size: 16px; font-weight: 900; letter-spacing: 0.5px;">${settings.restaurantName ? settings.restaurantName.toUpperCase() : 'FOOD KATTA'}</div>
-          ${settings.tagline ? `<div style="font-size: 10px; margin-top: 1px;">${settings.tagline}</div>` : ''}
+          <div style="font-size: 16px; font-weight: 900; letter-spacing: 0.5px; line-height: 1.3; margin-top: 4px; margin-bottom: 2px; clear: both;">${settings.restaurantName ? settings.restaurantName.toUpperCase() : 'FOOD KATTA'}</div>
+          ${settings.tagline ? `<div style="font-size: 10px; margin-top: 2px;">${settings.tagline}</div>` : ''}
           <div style="font-size: 10px; margin-top: 2px;">${settings.address || ''}</div>
           <div style="font-size: 10px;">Ph: ${settings.phone || ''}</div>
           ${(Number(settings.cgstRate || 0) > 0 || Number(settings.sgstRate || 0) > 0) && settings.gstin ? `<div style="font-size: 10px;">GSTIN: ${settings.gstin}</div>` : ''}
@@ -378,15 +365,19 @@ export function generateBillPDF(bill: Bill, settings: RestaurantSettings, logoDa
   let y = 6;
   const centerX = receiptWidth / 2;
 
-  // Render official Food Katta neon circular logo on the receipt header
-  const logo = logoDataUri || cachedLogoDataUri;
+  // Render official Food Katta round circular logo on the receipt header
+  const logo = logoDataUri || cachedLogoDataUri || FOOD_KATTA_CIRCULAR_LOGO_BASE64;
+  const logoSize = 16; // 16mm x 16mm round circular logo
   if (logo) {
     try {
-      const logoSize = 14; // 14mm x 14mm
-      doc.addImage(logo, 'JPEG', centerX - (logoSize / 2), y, logoSize, logoSize);
-      y += logoSize + 2.5;
+      doc.addImage(logo, 'PNG', centerX - (logoSize / 2), y, logoSize, logoSize);
+      // Advance y cleanly below the logo:
+      // Logo bottom is at (y + logoSize) = 22mm.
+      // Advance y by logoSize + 6.5mm to give plenty of breathing room above the restaurant name
+      y += logoSize + 6.5;
     } catch (err) {
       console.warn('PDF logo render note:', err);
+      y += 2;
     }
   }
 
