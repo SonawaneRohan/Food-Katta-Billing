@@ -26,6 +26,7 @@ import { StaffView } from './components/staff/StaffView.tsx';
 import { AuditLogView } from './components/audit-log/AuditLogView.tsx';
 import { SettingsView } from './components/settings/SettingsView.tsx';
 import { PublicBillView } from './components/bills/PublicBillView.tsx';
+import { LoginView } from './components/auth/LoginView.tsx';
 import { RestaurantTable } from './types/index.ts';
 
 const AppContent: React.FC = () => {
@@ -40,7 +41,7 @@ const AppContent: React.FC = () => {
     return null;
   });
 
-  const { currentStaff } = useAuth();
+  const { currentStaff, isAuthenticated, isTerminalLocked, isLoading } = useAuth();
   const { loadTableOrder, activeRegister, settings, tables, kotOrders } = useRestaurant();
 
   // Compute live badges for tables and kitchen
@@ -112,6 +113,11 @@ const AppContent: React.FC = () => {
         }}
       />
     );
+  }
+
+  // Gate the entire POS terminal with attractive Login / Lock Screen
+  if (!isAuthenticated || isTerminalLocked) {
+    return <LoginView />;
   }
 
   return (

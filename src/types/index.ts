@@ -235,8 +235,22 @@ export interface StaffMember {
   role: UserRole;
   status: 'ACTIVE' | 'INACTIVE';
   pinCode?: string;
+  password?: string;
   createdAt: string;
   lastLoginAt?: string;
+  updatedAt?: string;
+}
+
+export interface PasswordResetRequest {
+  id: string;
+  staffId: string;
+  staffName: string;
+  identifier: string; // email or phone
+  token: string;
+  otp: string;
+  expiresAt: string;
+  used: boolean;
+  createdAt: string;
 }
 
 export interface AuditLog {

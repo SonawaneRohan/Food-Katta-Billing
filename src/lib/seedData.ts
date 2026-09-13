@@ -390,6 +390,7 @@ export const INITIAL_STAFF: StaffMember[] = [
     phone: '+91 98765 43210',
     role: 'OWNER',
     status: 'ACTIVE',
+    pinCode: '1109',
     createdAt: new Date().toISOString(),
   },
   {
@@ -399,6 +400,7 @@ export const INITIAL_STAFF: StaffMember[] = [
     phone: '+91 98220 11223',
     role: 'MANAGER',
     status: 'ACTIVE',
+    pinCode: '2233',
     createdAt: new Date().toISOString(),
   },
   {
@@ -408,6 +410,7 @@ export const INITIAL_STAFF: StaffMember[] = [
     phone: '+91 99770 44556',
     role: 'CASHIER',
     status: 'ACTIVE',
+    pinCode: '1234',
     createdAt: new Date().toISOString(),
   },
   {
@@ -417,6 +420,7 @@ export const INITIAL_STAFF: StaffMember[] = [
     phone: '+91 98900 88990',
     role: 'KITCHEN',
     status: 'ACTIVE',
+    pinCode: '5566',
     createdAt: new Date().toISOString(),
   },
 ];

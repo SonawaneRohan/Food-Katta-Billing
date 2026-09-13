@@ -59,7 +59,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isMobileOpen,
   onCloseMobile,
 }) => {
-  const { currentStaff, hasPermission, logout } = useAuth();
+  const { currentStaff, hasPermission, logout, lockTerminal } = useAuth();
   const { tables, kotOrders } = useRestaurant();
 
   const activeTab = currentView || currentTab || 'pos';
@@ -195,16 +195,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const renderContent = (isMobileView: boolean) => (
     <>
-      {/* High Density Brand Header */}
-      <div className="p-4 border-b border-slate-800 flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-amber-500 font-black text-xl tracking-tighter">FOOD KATTA</h1>
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+      {/* High Density Brand Header with Neon Logo */}
+      <div className="p-3.5 border-b border-slate-800 flex items-center justify-between gap-2.5">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-cyan-400/90 shadow-[0_0_12px_rgba(34,211,238,0.45)] p-0.5 bg-slate-950 shrink-0">
+            <img
+              src="/assets/food_katta_logo.jpg"
+              alt="Food Katta"
+              referrerPolicy="no-referrer"
+              className="w-full h-full object-cover rounded-full"
+            />
           </div>
-          <p className="text-slate-500 text-[10px] uppercase font-bold tracking-widest mt-0.5">
-            Restaurant POS v2.0
-          </p>
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <h1 className="text-amber-400 font-black text-base tracking-tight truncate">
+                FOOD KATTA
+              </h1>
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+            </div>
+            <p className="text-slate-400 text-[9px] uppercase font-bold tracking-widest truncate">
+              Restaurant POS &bull; Sangli
+            </p>
+          </div>
         </div>
 
         {isMobileView && onCloseMobile && (
@@ -261,11 +273,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
         )}
         <button
           onClick={() => {
+            lockTerminal();
+            if (isMobileView && onCloseMobile) onCloseMobile();
+          }}
+          className="p-1.5 text-slate-500 hover:text-amber-400 rounded hover:bg-slate-800 transition-colors"
+          title="Lock POS Terminal"
+        >
+          <Lock className="w-3.5 h-3.5" />
+        </button>
+        <button
+          onClick={() => {
             logout();
             if (isMobileView && onCloseMobile) onCloseMobile();
           }}
           className="p-1.5 text-slate-500 hover:text-red-400 rounded hover:bg-slate-800 transition-colors"
-          title="Sign Out"
+          title="Sign Out / Switch Staff"
         >
           <LogOut className="w-3.5 h-3.5" />
         </button>

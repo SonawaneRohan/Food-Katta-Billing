@@ -153,6 +153,7 @@ export const StaffView: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
   const [deletingStaff, setDeletingStaff] = useState<StaffMember | null>(null);
+  const [deletingRole, setDeletingRole] = useState<{ role: UserRole; memberCount: number } | null>(null);
 
   // Quick PIN reveal tracking
   const [revealedPins, setRevealedPins] = useState<Record<string, boolean>>({});
@@ -302,6 +303,34 @@ export const StaffView: React.FC = () => {
       triggerNotification('success', `Staff member "${name}" was permanently removed.`);
     } catch (err: any) {
       triggerNotification('error', err.message || 'Failed to delete staff member.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Handle Delete Role Assignments
+  const handleDeleteRoleConfirm = async () => {
+    if (!deletingRole) return;
+    if (deletingRole.role === 'OWNER') {
+      triggerNotification('error', 'The Owner role is the master system role and cannot be deleted.');
+      setDeletingRole(null);
+      return;
+    }
+    try {
+      setIsProcessing(true);
+      const membersToReset = (allStaff || []).filter((s) => s.role === deletingRole.role);
+      for (const m of membersToReset) {
+        if (m.id !== currentStaff?.id) {
+          await updateStaffMember(m.id, { status: 'INACTIVE' });
+        }
+      }
+      triggerNotification(
+        'success',
+        `Role "${deletingRole.role}" assignments deleted. ${membersToReset.length} staff member(s) set to inactive.`
+      );
+      setDeletingRole(null);
+    } catch (err: any) {
+      triggerNotification('error', err.message || 'Failed to delete role assignments.');
     } finally {
       setIsProcessing(false);
     }
@@ -853,8 +882,8 @@ export const StaffView: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Quick Button to Filter Directory */}
-                    <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                    {/* Quick Button to Filter Directory & Delete Role Button */}
+                    <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
                       <button
                         onClick={() => {
                           setSelectedRoleFilter(def.role);
@@ -865,6 +894,27 @@ export const StaffView: React.FC = () => {
                         <span>View all {def.role} accounts</span>
                         <ChevronRight className="w-3.5 h-3.5" />
                       </button>
+
+                      {def.role === 'OWNER' ? (
+                        <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
+                          Protected System Role
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setDeletingRole({
+                              role: def.role,
+                              memberCount: membersWithRole.length,
+                            })
+                          }
+                          className="text-xs font-bold text-rose-600 hover:text-rose-700 hover:bg-rose-50 px-2.5 py-1 rounded border border-rose-200 flex items-center gap-1.5 transition-colors active:scale-95"
+                          title={`Delete ${def.role} role assignments`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Delete Role</span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
@@ -1225,6 +1275,56 @@ export const StaffView: React.FC = () => {
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   <span>{isProcessing ? 'Deleting...' : 'Yes, Delete Staff'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL 5: DELETE ROLE ASSIGNMENTS CONFIRMATION */}
+        {deletingRole && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-4">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-5 border border-rose-200 animate-in fade-in zoom-in-95 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                  <ShieldAlert className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-black text-sm text-slate-900 uppercase tracking-tight">
+                    Delete Role Assignments
+                  </h3>
+                  <p className="text-xs text-slate-500">Revoke assignments for this role</p>
+                </div>
+              </div>
+
+              <div className="bg-rose-50/70 border border-rose-200 rounded-lg p-3.5 space-y-2 text-xs text-rose-950">
+                <p className="font-medium">
+                  Are you sure you want to delete all assignments for role{' '}
+                  <span className="font-black text-rose-950 uppercase">{deletingRole.role}</span>?
+                </p>
+
+                <p className="text-[11px] text-rose-800">
+                  {deletingRole.memberCount} staff member(s) currently assigned to this role will be unassigned and set to <strong>INACTIVE</strong> immediately.
+                </p>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  disabled={isProcessing}
+                  onClick={() => setDeletingRole(null)}
+                  className="px-3.5 py-2 text-xs text-slate-600 hover:text-slate-900 font-bold rounded-lg"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isProcessing}
+                  onClick={handleDeleteRoleConfirm}
+                  className="px-4 py-2 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-black text-xs rounded-lg shadow-sm uppercase tracking-wider flex items-center gap-1.5 disabled:opacity-50 transition-all"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>{isProcessing ? 'Deleting...' : 'Yes, Delete Role'}</span>
                 </button>
               </div>
             </div>

@@ -1,6 +1,47 @@
 import { jsPDF } from 'jspdf';
 import { Bill, RestaurantSettings } from '../types/index.ts';
 
+// In-memory cache for Food Katta official logo base64
+let cachedLogoDataUri: string | null = null;
+
+// Preload the logo into memory on client startup
+if (typeof window !== 'undefined') {
+  fetch('/assets/food_katta_logo.jpg')
+    .then((r) => r.blob())
+    .then((blob) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        cachedLogoDataUri = reader.result as string;
+      };
+      reader.readAsDataURL(blob);
+    })
+    .catch(() => {});
+}
+
+/**
+ * Preloads the logo data URI if not yet loaded in memory
+ */
+export async function preloadBillLogo(): Promise<string | null> {
+  if (cachedLogoDataUri) return cachedLogoDataUri;
+  if (typeof window === 'undefined') return null;
+  try {
+    const res = await fetch('/assets/food_katta_logo.jpg');
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        cachedLogoDataUri = reader.result as string;
+        resolve(cachedLogoDataUri);
+      };
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Generates an HTML string optimized for standard 80mm or 58mm thermal receipt printers.
  */
@@ -25,6 +66,9 @@ export function generateReceiptHtml(
 
   const dateStr = bill.createdAt ? new Date(bill.createdAt).toLocaleDateString('en-IN') : new Date().toLocaleDateString('en-IN');
   const timeStr = bill.createdAt ? new Date(bill.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const logoSrc = cachedLogoDataUri || `${origin}/assets/food_katta_logo.jpg`;
 
   const itemsHtml = (bill.items || []).map((item) => {
     const qty = Number(item.quantity || 1);
@@ -112,6 +156,9 @@ export function generateReceiptHtml(
       </head>
       <body>
         <div class="text-center">
+          <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 4px;">
+            <img src="${logoSrc}" alt="Food Katta" style="width: 52px; height: 52px; border-radius: 50%; object-fit: cover; display: inline-block; border: 1.5px solid #222;" onerror="this.style.display='none'" />
+          </div>
           <div style="font-size: 16px; font-weight: 900; letter-spacing: 0.5px;">${settings.restaurantName ? settings.restaurantName.toUpperCase() : 'FOOD KATTA'}</div>
           ${settings.tagline ? `<div style="font-size: 10px; margin-top: 1px;">${settings.tagline}</div>` : ''}
           <div style="font-size: 10px; margin-top: 2px;">${settings.address || ''}</div>
@@ -315,10 +362,10 @@ export function openPrintWindow(
  * Robust, safe PDF generator for receipts using jsPDF.
  * Guards against all undefined/null numbers to prevent `.toFixed()` TypeErrors.
  */
-export function generateBillPDF(bill: Bill, settings: RestaurantSettings): jsPDF {
+export function generateBillPDF(bill: Bill, settings: RestaurantSettings, logoDataUri?: string | null): jsPDF {
   const receiptWidth = 80;
   const itemCount = bill.items ? bill.items.length : 0;
-  const estimatedHeight = Math.max(180, 120 + (itemCount * 10));
+  const estimatedHeight = Math.max(190, 135 + (itemCount * 10));
 
   const doc = new jsPDF({
     orientation: 'portrait',
@@ -328,8 +375,20 @@ export function generateBillPDF(bill: Bill, settings: RestaurantSettings): jsPDF
 
   const currencySymbol = settings.currency || 'Rs.';
 
-  let y = 8;
+  let y = 6;
   const centerX = receiptWidth / 2;
+
+  // Render official Food Katta neon circular logo on the receipt header
+  const logo = logoDataUri || cachedLogoDataUri;
+  if (logo) {
+    try {
+      const logoSize = 14; // 14mm x 14mm
+      doc.addImage(logo, 'JPEG', centerX - (logoSize / 2), y, logoSize, logoSize);
+      y += logoSize + 2.5;
+    } catch (err) {
+      console.warn('PDF logo render note:', err);
+    }
+  }
 
   const subtotal = Number(bill.subtotal || 0);
   const orderDiscount = Number(bill.orderDiscount || 0);
@@ -533,9 +592,12 @@ export function getBillPdfFile(bill: Bill, settings: RestaurantSettings): File {
   return new File([blob], `${cleanBillNo}.pdf`, { type: 'application/pdf' });
 }
 
-export function downloadBillPDF(bill: Bill, settings: RestaurantSettings) {
+export async function downloadBillPDF(bill: Bill, settings: RestaurantSettings) {
   try {
-    const doc = generateBillPDF(bill, settings);
+    if (!cachedLogoDataUri) {
+      await preloadBillLogo();
+    }
+    const doc = generateBillPDF(bill, settings, cachedLogoDataUri);
     doc.save(`${bill.billNumber || 'Food_Katta_Bill'}.pdf`);
   } catch (err) {
     console.error('Failed to download Bill PDF:', err);

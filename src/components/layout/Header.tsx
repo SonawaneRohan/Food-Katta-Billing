@@ -6,6 +6,7 @@ import {
   CircleDollarSign,
   Utensils,
   LogOut,
+  Lock,
   User,
   Menu,
 } from 'lucide-react';
@@ -28,7 +29,7 @@ export const Header: React.FC<HeaderProps> = ({
   onNavigateToTables,
   onToggleSidebar,
 }) => {
-  const { currentStaff, allStaff, switchStaff, logout } = useAuth();
+  const { currentStaff, allStaff, switchStaff, logout, lockTerminal } = useAuth();
   const { activeRegister, tables, settings, selectedTable, orderType } = useRestaurant();
 
   const [currentTime, setCurrentTime] = useState<string>('');
@@ -85,8 +86,8 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <>
       <header className="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-3 sm:px-4 lg:px-6 sticky top-0 z-30 select-none">
-        {/* Left: Hamburger (Mobile) + Active Table & Order Type Indicators */}
-        <div className="flex items-center gap-2 sm:gap-4 lg:gap-6 min-w-0">
+        {/* Left: Hamburger (Mobile) + Food Katta Logo + Active Table & Order Type Indicators */}
+        <div className="flex items-center gap-2 sm:gap-3 lg:gap-4 min-w-0">
           {onToggleSidebar && (
             <button
               onClick={onToggleSidebar}
@@ -97,6 +98,21 @@ export const Header: React.FC<HeaderProps> = ({
               <Menu className="w-5 h-5 text-slate-800" />
             </button>
           )}
+
+          {/* Food Katta Logo badge on Header */}
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="w-8 h-8 rounded-full overflow-hidden border border-cyan-500/80 shadow-[0_0_8px_rgba(6,182,212,0.3)] p-0.5 bg-slate-950 shrink-0">
+              <img
+                src="/assets/food_katta_logo.jpg"
+                alt="Food Katta"
+                referrerPolicy="no-referrer"
+                className="w-full h-full object-cover rounded-full"
+              />
+            </div>
+            <span className="font-black text-xs text-slate-900 tracking-tight hidden sm:inline uppercase">
+              Food Katta
+            </span>
+          </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
             <span className="text-[11px] sm:text-xs font-bold text-slate-500 uppercase hidden xs:inline">
@@ -146,13 +162,13 @@ export const Header: React.FC<HeaderProps> = ({
           <span className="font-mono font-bold text-slate-800">{currentTime}</span>
         </div>
 
-        {/* Right: Register Shift + Shortcuts + Current Staff */}
-        <div className="flex items-center gap-2.5">
+        {/* Right: Register Shift + Shortcuts + Current Staff + Quick Lock & Logout */}
+        <div className="flex items-center gap-2">
           {/* Register Shift Status */}
           {onNavigateToRegister && (
             <button
               onClick={onNavigateToRegister}
-              className={`hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded border text-xs font-semibold transition-colors ${
+              className={`hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded border text-xs font-semibold transition-colors ${
                 activeRegister
                   ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
                   : 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100'
@@ -175,6 +191,15 @@ export const Header: React.FC<HeaderProps> = ({
             title="Keyboard Shortcuts (F12)"
           >
             <Keyboard className="w-4 h-4" />
+          </button>
+
+          {/* Quick Lock Terminal Button */}
+          <button
+            onClick={lockTerminal}
+            className="p-1.5 text-slate-600 hover:text-amber-700 hover:bg-amber-50 rounded transition-colors border border-slate-200"
+            title="Lock POS Terminal"
+          >
+            <Lock className="w-4 h-4" />
           </button>
 
           {/* Staff Switcher Dropdown */}
@@ -236,7 +261,18 @@ export const Header: React.FC<HeaderProps> = ({
                   ))}
                 </div>
 
-                <div className="border-t border-slate-100 pt-1 mt-1 px-1">
+                <div className="border-t border-slate-100 pt-1 mt-1 px-1 space-y-1">
+                  <button
+                    onClick={() => {
+                      setIsStaffMenuOpen(false);
+                      lockTerminal();
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-amber-700 hover:bg-amber-50 rounded transition-colors font-medium"
+                  >
+                    <Lock className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Lock Terminal</span>
+                  </button>
+
                   <button
                     onClick={() => {
                       setIsStaffMenuOpen(false);
@@ -244,13 +280,23 @@ export const Header: React.FC<HeaderProps> = ({
                     }}
                     className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 rounded transition-colors font-medium"
                   >
-                    <LogOut className="w-3.5 h-3.5" />
-                    <span>Sign Out</span>
+                    <LogOut className="w-3.5 h-3.5 text-red-600" />
+                    <span>Sign Out from POS</span>
                   </button>
                 </div>
               </div>
             )}
           </div>
+
+          {/* Dedicated Header Logout Button */}
+          <button
+            onClick={logout}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition-all shrink-0"
+            title="Sign Out from POS"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Logout</span>
+          </button>
         </div>
       </header>
 
