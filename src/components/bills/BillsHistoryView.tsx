@@ -46,7 +46,9 @@ export const BillsHistoryView: React.FC = () => {
     // Payment method
     const matchesMethod =
       selectedMethod === 'ALL' ||
-      bill.payments?.some((p) => p.method === selectedMethod);
+      (selectedMethod === 'SPLIT'
+        ? Boolean(bill.payments && bill.payments.length > 1)
+        : bill.payments?.some((p) => p.method === selectedMethod));
 
     // Date range
     const billDate = new Date(bill.createdAt);
@@ -120,17 +122,23 @@ export const BillsHistoryView: React.FC = () => {
 
           {/* Payment Method Filter */}
           <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-md border border-slate-200">
-            {['ALL', 'CASH', 'UPI', 'CARD'].map((m) => (
+            {[
+              { id: 'ALL', label: 'All' },
+              { id: 'CASH', label: 'Cash' },
+              { id: 'UPI', label: 'Online' },
+              { id: 'CARD', label: 'Card' },
+              { id: 'SPLIT', label: 'Split (Cash+Online)' },
+            ].map(({ id, label }) => (
               <button
-                key={m}
-                onClick={() => setSelectedMethod(m)}
-                className={`px-2.5 py-1 rounded text-xs font-bold transition-colors ${
-                  selectedMethod === m
+                key={id}
+                onClick={() => setSelectedMethod(id)}
+                className={`px-2 py-1 rounded text-xs font-bold transition-colors whitespace-nowrap ${
+                  selectedMethod === id
                     ? 'bg-amber-500 text-slate-900 shadow-2xs'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
                 }`}
               >
-                {m}
+                {label}
               </button>
             ))}
           </div>
@@ -172,7 +180,14 @@ export const BillsHistoryView: React.FC = () => {
               <tbody className="divide-y divide-slate-100">
                 {filteredBills.map((bill) => {
                   const paymentSummary =
-                    bill.payments?.map((p) => p.method).join(' + ') || 'CASH';
+                    bill.payments && bill.payments.length > 0
+                      ? bill.payments
+                          .map(
+                            (p) =>
+                              `${p.method === 'UPI' ? 'Online' : p.method}: ₹${Number(p.amount || 0).toFixed(0)}`
+                          )
+                          .join(' + ')
+                      : bill.paymentMethod || 'CASH';
 
                   return (
                     <tr key={bill.id} className="hover:bg-slate-50 transition-colors">
