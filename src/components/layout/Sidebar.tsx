@@ -214,7 +214,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
             </div>
             <p className="text-slate-400 text-[9px] uppercase font-bold tracking-widest truncate">
-              Restaurant POS &bull; Sangli
+              Restaurant POS &bull; Dhule
             </p>
           </div>
         </div>
