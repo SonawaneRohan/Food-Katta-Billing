@@ -15,6 +15,7 @@ import {
   MessageSquare,
   ArrowLeft,
   ArrowRight,
+  X,
 } from 'lucide-react';
 import { useRestaurant } from '../../context/RestaurantContext.tsx';
 import { Product, OrderType, RestaurantTable } from '../../types/index.ts';
@@ -291,13 +292,41 @@ export const POSView: React.FC = () => {
             )}
 
             {/* Customer Pill */}
-            <button
-              onClick={() => setIsCustomerModalOpen(true)}
-              className="bg-slate-100 text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded text-xs font-bold border border-slate-200 flex items-center gap-1.5"
-            >
-              <User className="w-3.5 h-3.5 text-slate-500" />
-              <span>{selectedCustomer ? selectedCustomer.name : 'Customer (F4)'}</span>
-            </button>
+            <div className="flex items-center">
+              <button
+                id="pos-customer-btn"
+                onClick={() => setIsCustomerModalOpen(true)}
+                className={`px-3 py-1.5 rounded text-xs font-bold border flex items-center gap-1.5 transition-colors ${
+                  selectedCustomer
+                    ? 'bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200'
+                    : 'bg-slate-100 text-slate-600 hover:text-slate-900 border-slate-200'
+                }`}
+                title={
+                  selectedCustomer
+                    ? `Customer: ${selectedCustomer.name} (${selectedCustomer.phone}) - Click to change or edit`
+                    : 'Select or add customer (F4)'
+                }
+              >
+                <User className={`w-3.5 h-3.5 ${selectedCustomer ? 'text-amber-700' : 'text-slate-500'}`} />
+                <span className="truncate max-w-[140px]">
+                  {selectedCustomer ? selectedCustomer.name : 'Customer (F4)'}
+                </span>
+              </button>
+              {selectedCustomer && (
+                <button
+                  type="button"
+                  id="pos-clear-customer-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedCustomer(null);
+                  }}
+                  className="p-1 text-slate-400 hover:text-red-600 rounded ml-1 transition-colors"
+                  title="Remove customer from this order"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
           </div>
         </div>
 

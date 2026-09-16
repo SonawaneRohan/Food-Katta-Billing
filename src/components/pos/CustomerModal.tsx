@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Search, UserPlus, Phone, User, Check, MapPin } from 'lucide-react';
+import { X, Search, UserPlus, Phone, User, Check, MapPin, Edit2, AlertCircle } from 'lucide-react';
 import { useRestaurant } from '../../context/RestaurantContext.tsx';
 import { Customer } from '../../types/index.ts';
 
@@ -17,8 +17,9 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
   const { customers, saveCustomer } = useRestaurant();
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [isAddingNew, setIsAddingNew] = useState<boolean>(false);
+  const [editingCustomerId, setEditingCustomerId] = useState<string | null>(null);
 
-  // New customer form state
+  // Form state
   const [name, setName] = useState<string>('');
   const [phone, setPhone] = useState<string>('');
   const [whatsappNumber, setWhatsappNumber] = useState<string>('');
@@ -38,7 +39,27 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
         (c.whatsappNumber && c.whatsappNumber.includes(searchTerm)))
   );
 
-  const handleCreateCustomer = async (e: React.FormEvent) => {
+  const handleStartNew = () => {
+    setEditingCustomerId(null);
+    setName('');
+    setPhone('');
+    setWhatsappNumber('');
+    setAddress('');
+    setErrorMsg('');
+    setIsAddingNew(true);
+  };
+
+  const handleStartEdit = (cust: Customer) => {
+    setEditingCustomerId(cust.id);
+    setName(cust.name || '');
+    setPhone(cust.phone || '');
+    setWhatsappNumber(cust.whatsappNumber || cust.phone || '');
+    setAddress(cust.address || '');
+    setErrorMsg('');
+    setIsAddingNew(true);
+  };
+
+  const handleSaveCustomer = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !phone.trim()) {
       setErrorMsg('Name and Phone are required.');
@@ -48,13 +69,21 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
     try {
       setIsSubmitting(true);
       setErrorMsg('');
-      const created = await saveCustomer({
+
+      const existingCust = editingCustomerId
+        ? safeCustomers.find((c) => c.id === editingCustomerId)
+        : null;
+
+      const saved = await saveCustomer({
+        ...(existingCust || {}),
+        id: editingCustomerId || undefined,
         name: name.trim(),
         phone: phone.trim(),
-        whatsappNumber: whatsappNumber.trim() || phone.trim(),
+        whatsappNumber: (whatsappNumber.trim() || phone.trim()),
         address: address.trim(),
       });
-      onSelectCustomer(created);
+
+      onSelectCustomer(saved);
       onClose();
     } catch (err: any) {
       setErrorMsg(err.message || 'Failed to save customer.');
@@ -64,13 +93,19 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden border border-neutral-200">
         {/* Header */}
         <div className="px-5 py-4 bg-neutral-900 text-white flex items-center justify-between">
           <div className="flex items-center gap-2">
             <User className="w-5 h-5 text-amber-400" />
-            <h3 className="font-semibold text-base">Select or Add Customer</h3>
+            <h3 className="font-semibold text-base">
+              {isAddingNew
+                ? editingCustomerId
+                  ? 'Edit Customer Details'
+                  : 'Add New Customer'
+                : 'Select Customer'}
+            </h3>
           </div>
           <button
             onClick={onClose}
@@ -98,7 +133,8 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
                   />
                 </div>
                 <button
-                  onClick={() => setIsAddingNew(true)}
+                  type="button"
+                  onClick={handleStartNew}
                   className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors shrink-0"
                 >
                   <UserPlus className="w-4 h-4" />
@@ -107,45 +143,63 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
               </div>
 
               {/* Customer List */}
-              <div className="max-h-64 overflow-y-auto space-y-1.5 divide-y divide-neutral-100">
+              <div className="max-h-72 overflow-y-auto space-y-1.5 divide-y divide-neutral-100">
                 {filteredCustomers.length > 0 ? (
                   filteredCustomers.map((cust) => (
-                    <button
+                    <div
                       key={cust.id}
                       onClick={() => {
                         onSelectCustomer(cust);
                         onClose();
                       }}
-                      className="w-full text-left p-3 hover:bg-neutral-50 rounded-lg transition-colors flex items-center justify-between group"
+                      className="w-full text-left p-3 hover:bg-amber-50/50 rounded-lg transition-colors flex items-center justify-between group cursor-pointer border border-transparent hover:border-amber-200"
                     >
-                      <div>
+                      <div className="flex-1 min-w-0 pr-2">
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold text-sm text-neutral-800 group-hover:text-amber-700">
+                          <span className="font-semibold text-sm text-neutral-800 group-hover:text-amber-700 truncate">
                             {cust.name}
                           </span>
-                          <span className="text-xs text-neutral-600 bg-neutral-100 px-1.5 py-0.5 rounded">
+                          <span className="text-[10px] text-neutral-600 bg-neutral-100 px-1.5 py-0.5 rounded shrink-0">
                             {cust.totalVisits || 0} visits
                           </span>
                         </div>
-                        <div className="flex items-center gap-3 text-xs text-neutral-600 mt-1">
-                          <span className="flex items-center gap-1">
-                            <Phone className="w-3 h-3 text-neutral-600" />
+                        <div className="flex items-center gap-3 text-xs text-neutral-600 mt-1 flex-wrap">
+                          <span className="flex items-center gap-1 font-mono font-medium">
+                            <Phone className="w-3 h-3 text-neutral-500" />
                             {cust.phone}
                           </span>
                           {cust.address && (
-                            <span className="truncate max-w-[200px] text-neutral-600">
-                              {cust.address}
+                            <span className="truncate max-w-[180px] text-neutral-500 flex items-center gap-1">
+                              <MapPin className="w-3 h-3 shrink-0" />
+                              <span className="truncate">{cust.address}</span>
                             </span>
                           )}
                         </div>
                       </div>
-                      <div className="text-right">
-                        <span className="text-xs font-bold text-neutral-700">
-                          ₹{cust.totalSpending?.toFixed(0) || '0'}
-                        </span>
-                        <div className="text-[10px] text-neutral-600">Total Spend</div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <div className="text-right pr-1">
+                          <span className="text-xs font-bold text-neutral-700">
+                            ₹{cust.totalSpending?.toFixed(0) || '0'}
+                          </span>
+                          <div className="text-[10px] text-neutral-500">Spend</div>
+                        </div>
+
+                        {/* Edit Customer Button */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleStartEdit(cust);
+                          }}
+                          className="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-xs font-bold transition-all shadow-xs flex items-center gap-1 shrink-0"
+                          title={`Edit ${cust.name}'s name or phone`}
+                        >
+                          <Edit2 className="w-3 h-3 text-amber-700" />
+                          <span>Edit</span>
+                        </button>
                       </div>
-                    </button>
+                    </div>
                   ))
                 ) : (
                   <div className="py-8 text-center text-neutral-600 text-xs">
@@ -157,11 +211,12 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
               </div>
             </div>
           ) : (
-            /* Add New Customer Form */
-            <form onSubmit={handleCreateCustomer} className="space-y-3.5">
+            /* Add / Edit Customer Form */
+            <form onSubmit={handleSaveCustomer} className="space-y-3.5">
               {errorMsg && (
-                <div className="p-2.5 bg-red-50 text-red-700 text-xs rounded-lg border border-red-200">
-                  {errorMsg}
+                <div className="p-2.5 bg-red-50 text-red-700 text-xs rounded-lg border border-red-200 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{errorMsg}</span>
                 </div>
               )}
 
@@ -194,7 +249,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
                       setPhone(e.target.value);
                       if (!whatsappNumber) setWhatsappNumber(e.target.value);
                     }}
-                    className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                    className="w-full px-3 py-2 text-sm font-mono border border-neutral-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none"
                   />
                 </div>
                 <div>
@@ -206,7 +261,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
                     placeholder="Optional alternate phone"
                     value={whatsappNumber}
                     onChange={(e) => setWhatsappNumber(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                    className="w-full px-3 py-2 text-sm font-mono border border-neutral-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none"
                   />
                 </div>
               </div>
@@ -227,17 +282,27 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
               <div className="flex items-center justify-between pt-3 border-t border-neutral-200">
                 <button
                   type="button"
-                  onClick={() => setIsAddingNew(false)}
+                  onClick={() => {
+                    setIsAddingNew(false);
+                    setEditingCustomerId(null);
+                  }}
                   className="px-3 py-2 text-xs font-semibold text-neutral-600 hover:text-neutral-900"
                 >
-                  Back to Search
+                  Back to Customer List
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-4 py-2 text-xs font-bold bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 transition-colors disabled:opacity-50"
+                  className="px-4 py-2 text-xs font-bold bg-neutral-900 text-amber-400 rounded-lg hover:bg-neutral-800 transition-colors disabled:opacity-50 flex items-center gap-1.5"
                 >
-                  {isSubmitting ? 'Saving...' : 'Save & Attach to Bill'}
+                  {isSubmitting ? (
+                    'Saving...'
+                  ) : (
+                    <>
+                      <Check className="w-3.5 h-3.5" />
+                      <span>{editingCustomerId ? 'Update & Select' : 'Save & Attach to Bill'}</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>

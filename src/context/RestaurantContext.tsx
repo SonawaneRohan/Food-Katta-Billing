@@ -104,6 +104,7 @@ interface RestaurantContextType {
 
   // Customer Operations
   saveCustomer: (customer: Partial<Customer>) => Promise<Customer>;
+  deleteCustomer: (customerId: string) => Promise<void>;
 
   // Cash Register Operations
   openRegister: (openingCash: number, notes?: string) => Promise<void>;
@@ -1038,38 +1039,74 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       throw new Error('Customer name and phone are required.');
     }
 
+    const trimmedName = custData.name.trim();
+    const trimmedPhone = custData.phone.trim();
+    const trimmedWhatsapp = (custData.whatsappNumber || custData.phone || '').trim();
+    const trimmedEmail = (custData.email || '').trim();
+    const trimmedAddress = (custData.address || '').trim();
+    const trimmedNotes = (custData.notes || '').trim();
+
     if (custData.id) {
-      const { id, ...data } = custData;
-      await updateDoc(doc(db, 'customers', id), data);
-      await logAudit('CUSTOMER_UPDATED', 'Customer', `Updated customer: ${custData.name}`, id);
-      return custData as Customer;
+      const updatePayload: Record<string, any> = {
+        name: trimmedName,
+        phone: trimmedPhone,
+        whatsappNumber: trimmedWhatsapp,
+        email: trimmedEmail,
+        address: trimmedAddress,
+        notes: trimmedNotes,
+        updatedAt: new Date().toISOString(),
+      };
+      if (typeof custData.totalVisits === 'number') updatePayload.totalVisits = custData.totalVisits;
+      if (typeof custData.totalSpending === 'number') updatePayload.totalSpending = custData.totalSpending;
+      if (custData.lastVisit) updatePayload.lastVisit = custData.lastVisit;
+
+      await updateDoc(doc(db, 'customers', custData.id), updatePayload);
+      await logAudit('CUSTOMER_UPDATED', 'Customer', `Updated customer: ${trimmedName} (${trimmedPhone})`, custData.id);
+      return {
+        id: custData.id,
+        name: trimmedName,
+        phone: trimmedPhone,
+        whatsappNumber: trimmedWhatsapp,
+        email: trimmedEmail,
+        address: trimmedAddress,
+        notes: trimmedNotes,
+        totalVisits: custData.totalVisits || 0,
+        totalSpending: custData.totalSpending || 0,
+        lastVisit: custData.lastVisit,
+        createdAt: custData.createdAt || new Date().toISOString(),
+      };
     } else {
       const newCustDoc = await addDoc(collection(db, 'customers'), {
-        name: custData.name,
-        phone: custData.phone,
-        whatsappNumber: custData.whatsappNumber || custData.phone,
-        email: custData.email || '',
-        address: custData.address || '',
-        notes: custData.notes || '',
+        name: trimmedName,
+        phone: trimmedPhone,
+        whatsappNumber: trimmedWhatsapp,
+        email: trimmedEmail,
+        address: trimmedAddress,
+        notes: trimmedNotes,
         totalVisits: 0,
         totalSpending: 0,
         createdAt: new Date().toISOString(),
       });
       const createdCustomer: Customer = {
         id: newCustDoc.id,
-        name: custData.name,
-        phone: custData.phone,
-        whatsappNumber: custData.whatsappNumber || custData.phone,
-        email: custData.email || '',
-        address: custData.address || '',
-        notes: custData.notes || '',
+        name: trimmedName,
+        phone: trimmedPhone,
+        whatsappNumber: trimmedWhatsapp,
+        email: trimmedEmail,
+        address: trimmedAddress,
+        notes: trimmedNotes,
         totalVisits: 0,
         totalSpending: 0,
         createdAt: new Date().toISOString(),
       };
-      await logAudit('CUSTOMER_CREATED', 'Customer', `Created customer: ${custData.name} (${custData.phone})`, newCustDoc.id);
+      await logAudit('CUSTOMER_CREATED', 'Customer', `Created customer: ${trimmedName} (${trimmedPhone})`, newCustDoc.id);
       return createdCustomer;
     }
+  };
+
+  const deleteCustomer = async (customerId: string): Promise<void> => {
+    await deleteDoc(doc(db, 'customers', customerId));
+    await logAudit('CUSTOMER_DELETED', 'Customer', `Deleted customer ID: ${customerId}`, customerId);
   };
 
   // Cash Register
@@ -1258,6 +1295,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         deleteCategory,
 
         saveCustomer,
+        deleteCustomer,
         openRegister,
         closeRegister,
         openCashRegister: openRegister,
